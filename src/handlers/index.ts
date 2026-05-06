@@ -6,7 +6,7 @@ import { startHandler } from './start.js'
 import { helpHandler } from './help.js'
 import { subscribeHandler, subscribeToggleHandler } from './subscribe.js'
 import { newGroupConversation, newGroupEntry } from './newGroup.js'
-import { joinCommandHandler } from './joinGroup.js'
+import { joinCommandHandler, joinGroupMenuEntry, joinGroupMenuConversation } from './joinGroup.js'
 import { cancelCommandHandler } from './cancelGroup.js'
 import { feedbackConversation, feedbackEntry } from './feedback.js'
 import {
@@ -18,6 +18,7 @@ import { answerAndRender } from '../utils/telegram.js'
 export function registerAllHandlers(bot: Bot<MyContext>): void {
   bot.use(createConversation(newGroupConversation, 'new-group'))
   bot.use(createConversation(feedbackConversation, 'feedback'))
+  bot.use(createConversation(joinGroupMenuConversation, 'join-group'))
 
   bot.command('start', startHandler)
   bot.command('help',  helpHandler)
@@ -31,6 +32,7 @@ export function registerAllHandlers(bot: Bot<MyContext>): void {
   bot.callbackQuery(CB.SUB_TOGGLE,     subscribeToggleHandler)
   bot.callbackQuery(CB.MENU_NEW,       newGroupEntry)
   bot.callbackQuery(CB.MENU_LIST,      ctx => answerAndRender(ctx, renderList))
+  bot.callbackQuery(CB.MENU_JOIN,      joinGroupMenuEntry)
   bot.callbackQuery(CB.LIST_REFRESH,   refreshList)
   bot.callbackQuery(/^group:view:.+$/,   viewGroupHandler)
   bot.callbackQuery(/^group:join:.+$/,   joinGroupHandler)

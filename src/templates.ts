@@ -50,10 +50,13 @@ export const NEW_GROUP_TITLE_EMPTY_ERROR = 'Title cannot be empty. Try again:'
 export const NEW_GROUP_TITLE_TOO_LONG_ERROR = 'Title too long (max 60 chars). Try again:'
 
 export const NEW_GROUP_LINK_PROMPT =
-  '*Step 2 of 4:* Paste your group order link.'
+  '*Step 2 of 4:* Paste your group order link, or skip if you don\'t have one.'
 
 export const NEW_GROUP_INVALID_LINK_ERROR =
   'Please enter a valid link starting with http. Try again:'
+
+export const NEW_GROUP_LINK_NO_INVITE_WARNING =
+  'Do you have no invite link to share with the group?'
 
 export const NEW_GROUP_MAX_MEMBERS_PROMPT =
   '*Step 3 of 4:* How many people total (including you)?'
@@ -82,8 +85,9 @@ export function newGroupReview(
   maxMembers: number,
   expiryFormatted: string
 ): string {
+  const linkLine = grabLink ? `🔗 ${grabLink}\n` : `🔗 _No link provided_\n`
   return (
-    `✅ *Review your group:*\n\n🍱 ${title}\n🔗 ${grabLink}\n👥 Max: ${maxMembers}\n` +
+    `✅ *Review your group:*\n\n🍱 ${title}\n${linkLine}👥 Max: ${maxMembers}\n` +
     `⏰ Expires: ${expiryFormatted}\n\nConfirm?`
   )
 }
@@ -109,6 +113,14 @@ export const SHARE_GROUP_ALERT_PREFIX = 'Share this with friends:\n\n/join '
 export const SHARE_GROUP_ALERT_SUFFIX = '\n\nThey can type it in this bot!'
 
 // ── Join Group Messages ──────────────────────────────────────────
+export const JOIN_MENU_PROMPT =
+  '🔗 *Join a Group*\n\nEnter the group code below.\nType /cancel to go back.'
+
+export const JOIN_MENU_NOT_FOUND =
+  'Code not found or group unavailable. Enter another code, or type /cancel:'
+
+export const JOIN_MENU_CANCELLED = 'Cancelled.'
+
 export const JOIN_NO_CODE_ERROR =
   'Please provide a group code.\nExample: /join MANGO'
 
@@ -164,18 +176,16 @@ export function notifyMemberJoined(
 }
 
 export function notifyGroupFull(title: string, externalLink: string): string {
-  return (
-    `🎉 *${title}* is full! Time to order.\n\nOpen GrabFood: ${externalLink}`
-  )
+  const linkLine = externalLink ? `\n\nOpen Link: ${externalLink}` : ''
+  return `🎉 *${title}* is full! Time to order.${linkLine}`
 }
 
 export function notifyExpiryWarning(
   title: string,
   externalLink: string
 ): string {
-  return (
-    `⚠️ *${title}* is expiring in under 15 minutes!\n\nOpen GrabFood now: ${externalLink}`
-  )
+  const linkLine = externalLink ? `\n\nOpen Link now: ${externalLink}` : ''
+  return `⚠️ *${title}* is expiring in under 15 minutes!${linkLine}`
 }
 
 export function notifyGroupExpired(title: string, code: string): string {

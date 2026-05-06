@@ -1,13 +1,19 @@
 import type { Bot } from 'grammy'
-import type { MyContext } from '../types.js'
+import type { MyContext, MyConversation } from '../types.js'
 import * as groupService from '../services/groupService.js'
 import * as notificationService from '../services/notificationService.js'
-import { getGroupMembers, getGroupById } from '../db/groups.js'
+import { getGroupMembers, getGroupById, isMember } from '../db/groups.js'
 import { upsertUser } from '../db/users.js'
-import { backToListKeyboard, memberCardKeyboard } from '../utils/keyboards.js'
+import {
+  backToListKeyboard, backToMenuKeyboard,
+  memberCardKeyboard, leaderCardKeyboard, nonMemberCardKeyboard,
+} from '../utils/keyboards.js'
 import { formatGroupCardHeader, formatMemberList, escapeMd } from '../utils/formatters.js'
 import { buildCardKeyboard } from '../utils/telegram.js'
-import { JOIN_NO_CODE_ERROR, JOIN_SUCCESS_PREFIX, JOIN_ALERT_SUCCESS } from '../templates.js'
+import {
+  JOIN_NO_CODE_ERROR, JOIN_SUCCESS_PREFIX, JOIN_ALERT_SUCCESS,
+  JOIN_MENU_PROMPT, JOIN_MENU_NOT_FOUND, JOIN_MENU_CANCELLED,
+} from '../templates.js'
 
 export async function joinCommandHandler(ctx: MyContext): Promise<void> {
   if (!ctx.from) return
@@ -46,5 +52,66 @@ export async function joinCommandHandler(ctx: MyContext): Promise<void> {
   if (freshGroup?.status === 'full') {
     const freshMembers = await getGroupMembers(group.id)
     void notificationService.notifyGroupFull(bot, freshGroup, freshMembers.map(m => m.userId))
+  }
+}
+
+export async function joinGroupMenuEntry(ctx: MyContext): Promise<void> {
+  if (ctx.callbackQuery) await ctx.answerCallbackQuery()
+  await ctx.conversation.enter('join-group')
+}
+
+export async function joinGroupMenuConversation(
+  conversation: MyConversation,
+  ctx: MyContext,
+): Promise<void> {
+  await ctx.reply(JOIN_MENU_PROMPT, { parse_mode: 'Markdown' })
+
+  while (true) {
+    const msgCtx = await conversation.waitFor('message:text')
+    const code = msgCtx.message.text.trim().toUpperCase()
+
+    if (msgCtx.message.text.startsWith('/cancel')) {
+      await ctx.reply(JOIN_MENU_CANCELLED, {
+        reply_markup: backToMenuKeyboard(),
+        parse_mode: 'Markdown',
+      })
+      return
+    }
+
+    const result = await conversation.external(() => groupService.getGroupDetail(code))
+
+    if (
+      !result.ok ||
+      result.data.group.status === 'expired' ||
+      result.data.group.status === 'cancelled'
+    ) {
+      await ctx.reply(JOIN_MENU_NOT_FOUND)
+      continue
+    }
+
+    const userId = ctx.from!.id
+    const { group, members } = result.data
+    const isLeader = group.creatorId === userId
+    const memberFlag = await conversation.external(() => isMember(group.id, userId))
+    const header = formatGroupCardHeader(group, members[0] ?? null)
+
+    if (isLeader) {
+      await ctx.reply(header + '\n\n' + formatMemberList(members), {
+        reply_markup: buildCardKeyboard(group.externalLink, leaderCardKeyboard(code)),
+        parse_mode: 'Markdown',
+      })
+    } else if (memberFlag) {
+      await ctx.reply(header + '\n\n' + formatMemberList(members), {
+        reply_markup: buildCardKeyboard(group.externalLink, memberCardKeyboard(code)),
+        parse_mode: 'Markdown',
+      })
+    } else {
+      await ctx.reply(header, {
+        reply_markup: nonMemberCardKeyboard(code, group.status === 'full'),
+        parse_mode: 'Markdown',
+      })
+    }
+
+    break
   }
 }

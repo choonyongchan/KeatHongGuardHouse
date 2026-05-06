@@ -6,6 +6,7 @@ export const CB = {
   MENU_MAIN:      'menu:main',
   MENU_NEW:       'menu:new',
   MENU_LIST:      'menu:list',
+  MENU_JOIN:      'menu:join',
   MENU_SUBSCRIBE: 'menu:subscribe',
   MENU_FEEDBACK:  'menu:feedback',
   MENU_HELP:      'menu:help',
@@ -21,8 +22,8 @@ export const CB = {
 export function mainMenuKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .text('🍱 Browse Groups', CB.MENU_LIST).text('➕ New Group', CB.MENU_NEW).row()
-    .text('🔔 Subscribe', CB.MENU_SUBSCRIBE).text('📣 Feedback', CB.MENU_FEEDBACK).row()
-    .text('❓ Help', CB.MENU_HELP)
+    .text('🔗 Join Group', CB.MENU_JOIN).text('🔔 Subscribe', CB.MENU_SUBSCRIBE).row()
+    .text('📣 Feedback', CB.MENU_FEEDBACK).text('❓ Help', CB.MENU_HELP)
 }
 
 export function backToMenuKeyboard(): InlineKeyboard {
@@ -71,6 +72,16 @@ export function subscribeKeyboard(subscribed: boolean): InlineKeyboard {
   return new InlineKeyboard()
     .text(label, CB.SUB_TOGGLE)
     .text('🏠 Main Menu', CB.MENU_MAIN)
+}
+
+export function linkPromptKeyboard(): InlineKeyboard {
+  return new InlineKeyboard().text('Skip ⏭', 'new:link:skip')
+}
+
+export function noLinkConfirmKeyboard(): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('Yes, no link ✅', 'new:nolink:confirm')
+    .text('Add a link 🔗', 'new:nolink:back')
 }
 
 export function maxMembersKeyboard(): InlineKeyboard {
