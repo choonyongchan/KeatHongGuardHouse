@@ -33,12 +33,13 @@ export async function answerAndRender(
   await render(ctx)
 }
 
-/** Combine a GrabFood URL button row on top with action keyboard buttons below. */
+/** Combine an optional link button row on top with action keyboard buttons below. */
 export function buildCardKeyboard(
   grabLink: string,
   actionKeyboard: InlineKeyboard
 ): InlineKeyboard {
-  const combined = new InlineKeyboard().url('Open GrabFood 🔗', grabLink).row()
+  const combined = new InlineKeyboard()
+  if (grabLink) combined.url('Open Link 🔗', grabLink).row()
   for (const row of actionKeyboard.inline_keyboard) {
     for (const btn of row) {
       if ('callback_data' in btn) combined.text(btn.text, btn.callback_data)

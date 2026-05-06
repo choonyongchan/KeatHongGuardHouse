@@ -5,7 +5,8 @@ import * as groupService from '../services/groupService.js'
 import { getSubscriberIds } from '../db/users.js'
 import * as notificationService from '../services/notificationService.js'
 import {
-  CB, backToMenuKeyboard, maxMembersKeyboard, expiryKeyboard, confirmKeyboard,
+  CB, backToMenuKeyboard, linkPromptKeyboard, noLinkConfirmKeyboard,
+  maxMembersKeyboard, expiryKeyboard, confirmKeyboard,
 } from '../utils/keyboards.js'
 import { formatExpiry, escapeMd } from '../utils/formatters.js'
 import {
@@ -14,6 +15,7 @@ import {
   NEW_GROUP_TITLE_TOO_LONG_ERROR,
   NEW_GROUP_LINK_PROMPT,
   NEW_GROUP_INVALID_LINK_ERROR,
+  NEW_GROUP_LINK_NO_INVITE_WARNING,
   NEW_GROUP_MAX_MEMBERS_PROMPT,
   NEW_GROUP_CUSTOM_MAX_PROMPT,
   NEW_GROUP_INVALID_MAX_ERROR,
@@ -59,21 +61,35 @@ export async function newGroupConversation(
       title = text; break
     }
 
-    // Step 2: Grab link
-    await ctx.reply(
-      NEW_GROUP_LINK_PROMPT,
-      { parse_mode: 'Markdown' }
-    )
+    // Step 2: Grab link (optional)
     let grabLink = ''
-    while (true) {
-      const linkCtx = await conversation.waitFor('message:text')
-      const text = linkCtx.message.text.trim()
-      if (text.startsWith('/cancel')) {
-        await ctx.reply(newGroupCreationCancelled(), { reply_markup: backToMenuKeyboard(), parse_mode: 'Markdown' })
-        return
+    linkStep: while (true) {
+      await ctx.reply(NEW_GROUP_LINK_PROMPT, { reply_markup: linkPromptKeyboard(), parse_mode: 'Markdown' })
+      while (true) {
+        const linkCtx = await conversation.waitFor(['message:text', 'callback_query'])
+        if ('callbackQuery' in linkCtx && linkCtx.callbackQuery) {
+          await linkCtx.answerCallbackQuery()
+          const data = linkCtx.callbackQuery.data ?? ''
+          if (data === 'new:link:skip') {
+            await ctx.reply(NEW_GROUP_LINK_NO_INVITE_WARNING, { reply_markup: noLinkConfirmKeyboard() })
+            while (true) {
+              const confirmCtx = await conversation.waitFor('callback_query')
+              await confirmCtx.answerCallbackQuery()
+              const confirmData = confirmCtx.callbackQuery?.data
+              if (confirmData === 'new:nolink:confirm') { grabLink = ''; break linkStep }
+              if (confirmData === 'new:nolink:back') { continue linkStep }
+            }
+          }
+        } else if ('message' in linkCtx && linkCtx.message?.text) {
+          const text = linkCtx.message.text.trim()
+          if (text.startsWith('/cancel')) {
+            await ctx.reply(newGroupCreationCancelled(), { reply_markup: backToMenuKeyboard(), parse_mode: 'Markdown' })
+            return
+          }
+          if (!text.startsWith('http')) { await ctx.reply(NEW_GROUP_INVALID_LINK_ERROR); continue }
+          grabLink = text; break linkStep
+        }
       }
-      if (!text.startsWith('http')) { await ctx.reply(NEW_GROUP_INVALID_LINK_ERROR); continue }
-      grabLink = text; break
     }
 
     // Step 3: Max members

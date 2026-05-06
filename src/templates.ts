@@ -112,8 +112,14 @@ export const NO_GROUPS_AVAILABLE =
 export const GROUPS_LIST_HEADER =
   '🍱 *Food Groups*\nTap a group to see details and join.'
 
-export const SHARE_GROUP_ALERT_PREFIX = 'Share this with friends:\n\n/join '
-export const SHARE_GROUP_ALERT_SUFFIX = '\n\nThey can type it in this bot!'
+export function shareGroupGuide(code: string): string {
+  return (
+    `📨 *Invite a friend to join!*\n\n` +
+    `1. Open @keathongguardhousebot\n` +
+    `2. Tap *🔗 Join Group* or send \`/join ${code}\`\n\n` +
+    `🆔 Code: \`${code}\``
+  )
+}
 
 // ── Join Group Messages ──────────────────────────────────────────
 export const JOIN_MENU_PROMPT =

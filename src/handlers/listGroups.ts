@@ -14,8 +14,7 @@ import { sendOrEdit, cbCode, answerAndRender, buildCardKeyboard } from '../utils
 import {
   NO_GROUPS_AVAILABLE,
   GROUPS_LIST_HEADER,
-  SHARE_GROUP_ALERT_PREFIX,
-  SHARE_GROUP_ALERT_SUFFIX,
+  shareGroupGuide,
   LEAVE_GROUP_ALERT,
   LEAVE_GROUP_LEADER_ALERT,
   LEAVE_GROUP_NOT_FOUND,
@@ -157,8 +156,9 @@ export async function cancelGroupHandler(ctx: MyContext): Promise<void> {
 export async function shareGroupHandler(ctx: MyContext): Promise<void> {
   if (!ctx.from) return
   const code = cbCode(ctx.callbackQuery!.data ?? '')
-  await ctx.answerCallbackQuery({
-    text: `${SHARE_GROUP_ALERT_PREFIX}${code}${SHARE_GROUP_ALERT_SUFFIX}`,
-    show_alert: true,
+  await ctx.answerCallbackQuery()
+  await ctx.reply(shareGroupGuide(code), {
+    reply_markup: backToListKeyboard(),
+    parse_mode: 'Markdown',
   })
 }
