@@ -4,4 +4,4 @@ builder = "RAILPACK"
 [deploy]
 startCommand = "bun src/bot.ts"
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 5
+restartPolicyMaxRetries = 3
