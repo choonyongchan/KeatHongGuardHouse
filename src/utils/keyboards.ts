@@ -7,6 +7,7 @@ export const CB = {
   MENU_NEW:       'menu:new',
   MENU_LIST:      'menu:list',
   MENU_JOIN:      'menu:join',
+  MENU_MY_GROUPS: 'menu:my-groups',
   MENU_SUBSCRIBE: 'menu:subscribe',
   MENU_FEEDBACK:  'menu:feedback',
   MENU_HELP:      'menu:help',
@@ -22,8 +23,9 @@ export const CB = {
 export function mainMenuKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .text('🍱 Browse Groups', CB.MENU_LIST).text('➕ New Group', CB.MENU_NEW).row()
-    .text('🔗 Join Group', CB.MENU_JOIN).text('🔔 Subscribe', CB.MENU_SUBSCRIBE).row()
-    .text('📣 Feedback', CB.MENU_FEEDBACK).text('❓ Help', CB.MENU_HELP)
+    .text('🔗 Join Group', CB.MENU_JOIN).text('👤 My Groups', CB.MENU_MY_GROUPS).row()
+    .text('🔔 Subscribe', CB.MENU_SUBSCRIBE).text('📣 Feedback', CB.MENU_FEEDBACK).row()
+    .text('❓ Help', CB.MENU_HELP)
 }
 
 export function backToMenuKeyboard(): InlineKeyboard {

@@ -112,6 +112,12 @@ export const NO_GROUPS_AVAILABLE =
 export const GROUPS_LIST_HEADER =
   '🍱 *Food Groups*\nTap a group to see details and join.'
 
+export const MY_GROUPS_HEADER =
+  '👤 *My Groups*\nYour active groups as leader. Tap one to manage.'
+
+export const MY_GROUPS_EMPTY =
+  '👤 *My Groups*\n\nYou have no active groups.\nTap *➕ New Group* to create one!'
+
 export function shareGroupGuide(code: string): string {
   return (
     `📨 *Invite a friend to join!*\n\n` +
