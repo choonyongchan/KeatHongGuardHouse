@@ -5,7 +5,10 @@
 
 // ── Main Menu Messages ─────────────────────────────────────────────
 export const WELCOME_MESSAGE =
-  '👋 Welcome to *KeatHongGuardHouse!*\n\nFind people to group order food with.\nTap a button to get started.'
+  '✨ *KeatHongGuardHouse*\n\n' +
+  'GrabFood discount? MLBB squad? Grabbing home?\n' +
+  "Don't go alone — find your people here.\n\n" +
+  'Tap a button to get started.'
 
 // ── Help Command ──────────────────────────────────────────────────
 export const HELP_TEXT =
