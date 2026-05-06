@@ -1,5 +1,5 @@
 [build]
-builder = "RAILPACKS"
+builder = "RAILPACK"
 
 [deploy]
 startCommand = "bun src/bot.ts"
