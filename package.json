@@ -6,7 +6,7 @@
     "dev": "bun --watch src/bot.ts",
     "start": "bun src/bot.ts",
     "test": "bunx vitest run",
-    "build": "bun build src/bot.ts --outdir dist"
+    "build": "bun build src/bot.ts --outdir dist --target bun"
   },
   "dependencies": {
     "grammy": "^1.42.0",
