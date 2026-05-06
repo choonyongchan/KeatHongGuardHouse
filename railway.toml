@@ -1,0 +1,7 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "bun src/bot.ts"
+restartPolicyType = "on-failure"
+restartPolicyMaxRetries = 5
