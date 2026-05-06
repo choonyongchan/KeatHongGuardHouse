@@ -13,7 +13,7 @@ import {
   renderList, listCommand, refreshList, viewGroupHandler, joinGroupHandler,
   leaveGroupHandler, cancelGroupHandler, shareGroupHandler,
 } from './listGroups.js'
-import { myGroupsHandler } from './myGroups.js'
+import { myGroupsHandler, refreshMyGroups } from './myGroups.js'
 import { answerAndRender } from '../utils/telegram.js'
 
 export function registerAllHandlers(bot: Bot<MyContext>): void {
@@ -26,6 +26,7 @@ export function registerAllHandlers(bot: Bot<MyContext>): void {
   bot.command('subscribe', subscribeHandler)
   bot.command('new', newGroupEntry)
   bot.command('list', listCommand)
+  bot.command('mygroups', myGroupsHandler)
 
   bot.callbackQuery(CB.MENU_MAIN,      startHandler)
   bot.callbackQuery(CB.MENU_HELP,      helpHandler)
@@ -35,8 +36,8 @@ export function registerAllHandlers(bot: Bot<MyContext>): void {
   bot.callbackQuery(CB.MENU_LIST,      ctx => answerAndRender(ctx, renderList))
   bot.callbackQuery(CB.MENU_JOIN,      joinGroupMenuEntry)
   bot.callbackQuery(CB.MENU_MY_GROUPS, myGroupsHandler)
-  bot.command('mygroups', myGroupsHandler)
   bot.callbackQuery(CB.LIST_REFRESH,   refreshList)
+  bot.callbackQuery(CB.MY_GROUPS_REFRESH, refreshMyGroups)
   bot.callbackQuery(/^group:view:.+$/,   viewGroupHandler)
   bot.callbackQuery(/^group:join:.+$/,   joinGroupHandler)
   bot.callbackQuery(/^group:leave:.+$/,  leaveGroupHandler)

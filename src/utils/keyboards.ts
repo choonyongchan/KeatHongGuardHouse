@@ -12,6 +12,7 @@ export const CB = {
   MENU_FEEDBACK:  'menu:feedback',
   MENU_HELP:      'menu:help',
   LIST_REFRESH:   'list:refresh',
+  MY_GROUPS_REFRESH: 'my-groups:refresh',
   SUB_TOGGLE:     'subscribe:toggle',
   groupView:   (code: string) => `group:view:${code}`,
   groupJoin:   (code: string) => `group:join:${code}`,
@@ -44,6 +45,15 @@ export function groupListKeyboard(groups: FoodGroup[]): InlineKeyboard {
     kb.text(formatGroupListRow(g), CB.groupView(g.code)).row()
   }
   kb.text('🔄 Refresh', CB.LIST_REFRESH).text('🏠 Main Menu', CB.MENU_MAIN)
+  return kb
+}
+
+export function myGroupsListKeyboard(groups: FoodGroup[]): InlineKeyboard {
+  const kb = new InlineKeyboard()
+  for (const g of groups) {
+    kb.text(formatGroupListRow(g), CB.groupView(g.code)).row()
+  }
+  kb.text('🔄 Refresh', CB.MY_GROUPS_REFRESH).text('🏠 Main Menu', CB.MENU_MAIN)
   return kb
 }
 
