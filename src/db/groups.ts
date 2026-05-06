@@ -46,8 +46,9 @@ export async function createGroup(params: {
 
 export async function getGroupByCode(code: string): Promise<FoodGroup | null> {
   const res = await query<Record<string, unknown>>(
-    `SELECT fg.*,
-      (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = fg.id) AS current_count
+    `SELECT fg.id, fg.code, fg.creator_id, fg.title, fg.external_link,
+            fg.max_members, fg.expires_at, fg.status, fg.expiry_warned, fg.created_at,
+            (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = fg.id) AS current_count
      FROM food_groups fg
      WHERE fg.code = $1`,
     [code]
@@ -57,8 +58,9 @@ export async function getGroupByCode(code: string): Promise<FoodGroup | null> {
 
 export async function getGroupById(id: number): Promise<FoodGroup | null> {
   const res = await query<Record<string, unknown>>(
-    `SELECT fg.*,
-      (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = fg.id) AS current_count
+    `SELECT fg.id, fg.code, fg.creator_id, fg.title, fg.external_link,
+            fg.max_members, fg.expires_at, fg.status, fg.expiry_warned, fg.created_at,
+            (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = fg.id) AS current_count
      FROM food_groups fg
      WHERE fg.id = $1`,
     [id]
@@ -68,8 +70,9 @@ export async function getGroupById(id: number): Promise<FoodGroup | null> {
 
 export async function getOpenGroups(): Promise<FoodGroup[]> {
   const res = await query<Record<string, unknown>>(
-    `SELECT fg.*,
-      (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = fg.id) AS current_count
+    `SELECT fg.id, fg.code, fg.creator_id, fg.title, fg.external_link,
+            fg.max_members, fg.expires_at, fg.status, fg.expiry_warned, fg.created_at,
+            (SELECT COUNT(*)::int FROM group_members gm WHERE gm.group_id = fg.id) AS current_count
      FROM food_groups fg
      WHERE fg.status IN ('open', 'full')
      ORDER BY fg.expires_at ASC`
