@@ -2,7 +2,7 @@ import type { Bot } from 'grammy'
 import type { MyContext, MyConversation } from '../types.js'
 import * as groupService from '../services/groupService.js'
 import * as notificationService from '../services/notificationService.js'
-import { getGroupMembers, getGroupById, isMember } from '../db/groups.js'
+import { getGroupMembers, getGroupById } from '../db/groups.js'
 import { upsertUser } from '../db/users.js'
 import {
   backToListKeyboard, backToMenuKeyboard,
@@ -56,6 +56,7 @@ export async function joinCommandHandler(ctx: MyContext): Promise<void> {
 }
 
 export async function joinGroupMenuEntry(ctx: MyContext): Promise<void> {
+  if (!ctx.from) return
   if (ctx.callbackQuery) await ctx.answerCallbackQuery()
   await ctx.conversation.enter('join-group')
 }
@@ -85,14 +86,14 @@ export async function joinGroupMenuConversation(
       result.data.group.status === 'expired' ||
       result.data.group.status === 'cancelled'
     ) {
-      await ctx.reply(JOIN_MENU_NOT_FOUND)
+      await ctx.reply(JOIN_MENU_NOT_FOUND, { parse_mode: 'Markdown' })
       continue
     }
 
     const userId = ctx.from!.id
     const { group, members } = result.data
     const isLeader = group.creatorId === userId
-    const memberFlag = await conversation.external(() => isMember(group.id, userId))
+    const memberFlag = members.some(m => m.userId === userId)
     const header = formatGroupCardHeader(group, members[0] ?? null)
 
     if (isLeader) {
