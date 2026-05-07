@@ -74,7 +74,7 @@ export function getGroup(code: string): Promise<FoodGroupDetail> {
 export function createGroup(payload: {
   title: string;
   externalLink: string;
-  maxMembers: number;
+  maxMembers: number | null;
   expiryMinutes: number;
 }): Promise<FoodGroup> {
   return apiFetch<FoodGroup>('/api/groups', {
