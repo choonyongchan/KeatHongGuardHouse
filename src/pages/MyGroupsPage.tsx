@@ -45,7 +45,11 @@ function GroupSection({
       </p>
       <div style={{ padding: '0 16px' }}>
         {groups.map((g) => (
-          <GroupCard key={g.id} group={g} onTap={onTap} />
+          <GroupCard
+            key={g.id}
+            group={g}
+            actions={[{ label: 'View', style: 'primary', onClick: () => onTap(g) }]}
+          />
         ))}
       </div>
     </div>
