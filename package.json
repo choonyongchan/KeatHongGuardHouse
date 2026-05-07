@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "engines": {
-    "node": "26.x"
+    "node": "latest"
   },
   "scripts": {
     "dev": "vite",
@@ -14,32 +14,32 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@telegram-apps/telegram-ui": "^2.1.13",
-    "@tma.js/sdk-react": "^3.0.19",
-    "@vercel/postgres": "^0.10.0",
-    "eruda": "^3.4.3",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "react-router-dom": "^7.15.0",
-    "swr": "^2.4.1"
+    "@telegram-apps/telegram-ui": "latest",
+    "@tma.js/sdk-react": "latest",
+    "@vercel/postgres": "latest",
+    "eruda": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-router-dom": "latest",
+    "swr": "latest"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^25.6.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/eslint-plugin": "^8.59.2",
-    "@typescript-eslint/parser": "^8.59.2",
-    "@vitejs/plugin-react-swc": "^4.3.0",
-    "cross-env": "^10.1.0",
-    "eslint": "^10.3.0",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "globals": "^17.6.0",
-    "terser": "^5.46.2",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.10",
-    "vite-plugin-mkcert": "^2.0.0"
+    "@eslint/js": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@typescript-eslint/eslint-plugin": "latest",
+    "@typescript-eslint/parser": "latest",
+    "@vitejs/plugin-react-swc": "latest",
+    "cross-env": "latest",
+    "eslint": "latest",
+    "eslint-plugin-react": "latest",
+    "eslint-plugin-react-hooks": "latest",
+    "globals": "latest",
+    "terser": "latest",
+    "typescript": "latest",
+    "typescript-eslint": "latest",
+    "vite": "latest",
+    "vite-plugin-mkcert": "latest"
   }
 }
