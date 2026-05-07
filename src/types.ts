@@ -15,7 +15,7 @@ export interface FoodGroup {
   creator_username: string | null;
   title: string;
   external_link: string;
-  max_members: number;
+  max_members: number | null;
   current_count: number;
   expires_at: string;
   status: GroupStatus;
