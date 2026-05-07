@@ -1,87 +1,74 @@
-/**
- * @fileoverview MyGroupsPage — Tab 3. Shows groups the user created and joined.
- */
-
 import { useState } from 'react';
 import useSWR from 'swr';
-import { Spinner, Placeholder } from '@telegram-apps/telegram-ui';
+import { Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback, useSignal, initData } from '@tma.js/sdk-react';
 
-import { getMe, getGroup } from '../lib/api.ts';
+import { getMe, getGroup, cancelGroup, leaveGroup } from '../lib/api.ts';
 import type { FoodGroup, FoodGroupDetail, UserProfile } from '../types.ts';
 import { GroupCard } from '../components/GroupCard.tsx';
 import { GroupDetailSheet } from '../components/GroupDetailSheet.tsx';
+import { theme } from '../lib/theme.ts';
 
-/**
- * Renders a labelled section of group cards.
- *
- * @param props.title - Section heading text.
- * @param props.groups - Groups to render.
- * @param props.onTap - Called when a card is tapped.
- * @returns A section div with heading and cards.
- */
-function GroupSection({
-  title,
-  groups,
-  onTap,
-}: {
-  title: string;
-  groups: FoodGroup[];
-  onTap: (g: FoodGroup) => void;
-}) {
-  if (groups.length === 0) return null;
-
+function SectionLabel({ label }: { label: string }) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <p style={{
-        fontSize: 12,
-        fontWeight: 600,
-        letterSpacing: 0.5,
-        color: 'var(--tg-theme-hint-color)',
-        padding: '0 16px',
-        margin: '0 0 6px',
-      }}>
-        {title.toUpperCase()}
-      </p>
-      <div style={{ padding: '0 16px' }}>
-        {groups.map((g) => (
-          <GroupCard
-            key={g.id}
-            group={g}
-            actions={[{ label: 'View', style: 'primary', onClick: () => onTap(g) }]}
-          />
-        ))}
-      </div>
+    <div style={{
+      fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+      color: theme.textSecondary, marginBottom: 8,
+    }}>
+      {label}
     </div>
   );
 }
 
-/**
- * My Groups tab — displays the authenticated user's created and joined groups.
- * Tapping a card opens GroupDetailSheet.
- *
- * @returns The my-groups page JSX element.
- */
+function EmptySectionNote({ message }: { message: string }) {
+  return (
+    <p style={{ fontSize: 13, color: theme.textMuted, marginBottom: 16 }}>{message}</p>
+  );
+}
+
 export function MyGroupsPage() {
   const { data, error, mutate } = useSWR<UserProfile>('/api/users/me', getMe, {
     refreshInterval: 30_000,
   });
-
   const [selected, setSelected] = useState<FoodGroupDetail | null>(null);
+  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const userId = useSignal(initData.user)?.id ?? 0;
 
-  /**
-   * Fetches group detail and opens the sheet when a card is tapped.
-   *
-   * @param group - The tapped group.
-   */
-  async function handleCardTap(group: FoodGroup) {
+  async function handleDetails(group: FoodGroup) {
     hapticFeedback.impactOccurred('light');
     try {
       const detail = await getGroup(group.code);
       setSelected(detail);
     } catch {
-      // Group may have been deleted; ignore silently.
+      // ignore
+    }
+  }
+
+  async function handleCancel(group: FoodGroup) {
+    hapticFeedback.impactOccurred('medium');
+    setActionLoadingId(group.id);
+    try {
+      await cancelGroup(group.code);
+      hapticFeedback.notificationOccurred('success');
+      void mutate();
+    } catch {
+      hapticFeedback.notificationOccurred('error');
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  async function handleLeave(group: FoodGroup) {
+    hapticFeedback.impactOccurred('medium');
+    setActionLoadingId(group.id);
+    try {
+      await leaveGroup(group.code);
+      hapticFeedback.notificationOccurred('success');
+      void mutate();
+    } catch {
+      hapticFeedback.notificationOccurred('error');
+    } finally {
+      setActionLoadingId(null);
     }
   }
 
@@ -93,31 +80,46 @@ export function MyGroupsPage() {
     );
   }
 
-  const hasAny = (data?.createdGroups.length ?? 0) + (data?.joinedGroups.length ?? 0) > 0;
-
   return (
     <div style={{ paddingBottom: 80, paddingTop: 16 }}>
-      {!hasAny && (
-        <Placeholder
-          header="No groups yet"
-          description="Create a new group or join one from the Browse tab."
-        />
-      )}
+      {/* Header */}
+      <div style={{ padding: '0 16px 16px' }}>
+        <div style={{ fontWeight: 800, fontSize: 22, color: theme.textPrimary }}>My Groups</div>
+      </div>
 
-      {data && (
-        <>
-          <GroupSection
-            title="Groups I Lead"
-            groups={data.createdGroups}
-            onTap={handleCardTap}
+      <div style={{ padding: '0 16px' }}>
+        {/* LEADING */}
+        <SectionLabel label="LEADING" />
+        {data?.createdGroups.length === 0 && (
+          <EmptySectionNote message="You're not leading any groups" />
+        )}
+        {data?.createdGroups.map((g) => (
+          <GroupCard
+            key={g.id}
+            group={g}
+            actions={[
+              { label: 'Details', style: 'outline', onClick: () => handleDetails(g) },
+              { label: 'Cancel Group', style: 'danger', onClick: () => handleCancel(g), loading: actionLoadingId === g.id },
+            ]}
           />
-          <GroupSection
-            title="Groups I Joined"
-            groups={data.joinedGroups}
-            onTap={handleCardTap}
+        ))}
+
+        {/* JOINED */}
+        <SectionLabel label="JOINED" />
+        {data?.joinedGroups.length === 0 && (
+          <EmptySectionNote message="You haven't joined any groups" />
+        )}
+        {data?.joinedGroups.map((g) => (
+          <GroupCard
+            key={g.id}
+            group={g}
+            actions={[
+              { label: 'Details', style: 'outline', onClick: () => handleDetails(g) },
+              { label: 'Leave', style: 'outline', onClick: () => handleLeave(g), loading: actionLoadingId === g.id },
+            ]}
           />
-        </>
-      )}
+        ))}
+      </div>
 
       {selected && (
         <GroupDetailSheet
