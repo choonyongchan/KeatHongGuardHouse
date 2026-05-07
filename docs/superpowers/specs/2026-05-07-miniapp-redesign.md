@@ -82,7 +82,7 @@ All existing `var(--tg-theme-*)` usages for accent/status colors are replaced wi
 |---|---|---|
 | 1 | What are you ordering? | Free-text input for group name |
 | 2 | Paste your order link | URL input (GrabFood / Foodpanda) |
-| 3 | How many spots? | Chip selector: 2 3 4 5 6 + "No Limit" |
+| 3 | How many spots? | Chip selector: 2 4 8 16 32 + "No Limit" + "Custom" |
 | 4 | When does it close? | Chip selector: 30m 1h 2h 4h + "Custom" · button becomes "Create Group ✓" |
 
 - Progress bar: 4 filled segments, `1 of 4` counter on right
@@ -91,8 +91,9 @@ All existing `var(--tg-theme-*)` usages for accent/status colors are replaced wi
 - On step 4, Next becomes "Create Group ✓" and submits directly
 
 **Step 3 — Spots:**
-- Chips: `2` `3` `4` `5` `6` `No Limit`
-- "No Limit" maps to `null` / unlimited in the API payload (`max_members = null`)
+- Chips: `2` `4` `8` `16` `32` `No Limit` `Custom`
+- "No Limit" maps to `null` in the API payload (`max_members = null`)
+- "Custom" reveals a numeric input (min: 2, no upper cap) for an arbitrary member count
 
 **Step 4 — Expiry:**
 - Chips: `30m` `1h` `2h` `4h` `Custom`
@@ -131,7 +132,7 @@ All existing `var(--tg-theme-*)` usages for accent/status colors are replaced wi
 | No groups found. Be the first to create one! | No open groups. Start one? |
 | What would you like to name your food group? | What are you ordering? |
 | Please enter the GrabFood or Foodpanda URL for the group order | Paste your order link |
-| How many people are in your group? | How many spots? (2–6 or No Limit) |
+| How many people are in your group? | How many spots? (2/4/8/16/32, No Limit, or Custom) |
 | When should the group expire? | When does it close? (30m/1h/2h/4h or Custom time) |
 | Review your group details | *(removed — no confirm step)* |
 | Create Food Group | Create Group ✓ |
