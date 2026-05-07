@@ -1,247 +1,295 @@
-/**
- * @fileoverview CreateGroupStepper — 4-step wizard for creating a new food group.
- * Steps: 1) Title → 2) Link → 3) Max members → 4) Expiry → Confirm
- */
-
+// miniapp/src/components/CreateGroupStepper.tsx
 import { useState } from 'react';
-import { Button, Input, Spinner } from '@telegram-apps/telegram-ui';
+import { Spinner } from '@telegram-apps/telegram-ui';
 import { createGroup } from '../lib/api.ts';
 import type { FoodGroup } from '../types.ts';
+import { theme } from '../lib/theme.ts';
+import type { CSSProperties } from 'react';
 
-/** The form state collected across all steps. */
 interface GroupDraft {
   title: string;
   externalLink: string;
-  maxMembers: number;
-  expiryMinutes: number;
+  maxMembers: number | null;   // null = No Limit, -1 = custom mode with no value yet
+  customMembers: string;        // raw input when Custom selected
+  expiryMinutes: number | null; // null = custom time chosen
+  customTime: string;           // HH:MM string when Custom selected
 }
 
-const MEMBER_PRESETS = [2, 3, 4, 5, 6] as const;
+const MEMBER_PRESETS = [2, 4, 8, 16, 32] as const;
 const EXPIRY_PRESETS: { label: string; value: number }[] = [
   { label: '30m', value: 30 },
-  { label: '1h', value: 60 },
-  { label: '2h', value: 120 },
-  { label: '4h', value: 240 },
+  { label: '1h',  value: 60 },
+  { label: '2h',  value: 120 },
+  { label: '4h',  value: 240 },
 ];
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+
+const hintStyle: CSSProperties = {
+  fontSize: 13, color: theme.textSecondary, marginBottom: 10, marginTop: 0,
+};
+
+function chipStyle(selected: boolean): CSSProperties {
+  return {
+    padding: '7px 14px',
+    borderRadius: 20,
+    border: selected ? `2px solid ${theme.accent}` : `1.5px solid ${theme.border}`,
+    background: selected ? theme.accentLight : 'transparent',
+    color: selected ? theme.accent : theme.textSecondary,
+    fontWeight: 600,
+    fontSize: 13,
+    cursor: 'pointer',
+  };
+}
+
+function inputStyle(hasError = false): CSSProperties {
+  return {
+    width: '100%',
+    border: `1.5px solid ${hasError ? theme.error : theme.border}`,
+    borderRadius: 10,
+    padding: '10px 12px',
+    fontSize: 13,
+    color: theme.textPrimary,
+    background: theme.cardBg,
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
+}
 
 // ── Step sub-components ───────────────────────────────────────────────────────
 
-/** Props shared by all step components. */
 interface StepProps {
   draft: GroupDraft;
   onChange: (patch: Partial<GroupDraft>) => void;
   error: string | null;
 }
 
-/**
- * Step 1: Group title input.
- *
- * @param props - StepProps.
- */
 function StepTitle({ draft, onChange, error }: StepProps) {
   return (
     <div>
-      <p style={hintStyle}>What are you ordering?</p>
-      <Input
+      <p style={hintStyle}>Give your group a name people will recognise</p>
+      <input
         placeholder="e.g. Supper at Al-Ameen"
         value={draft.title}
         onChange={(e) => onChange({ title: e.target.value })}
-        status={error ? 'error' : undefined}
-        header={error ?? undefined}
         maxLength={60}
+        autoComplete="off"
+        style={inputStyle(!!error)}
+        aria-label="Group title"
       />
+      {error && <p style={{ color: theme.error, fontSize: 11, marginTop: 4 }}>{error}</p>}
     </div>
   );
 }
 
-/**
- * Step 2: Optional GrabFood or external link.
- *
- * @param props - StepProps.
- */
 function StepLink({ draft, onChange, error }: StepProps) {
   return (
     <div>
-      <p style={hintStyle}>Paste your GrabFood / order link (optional)</p>
-      <Input
-        placeholder="https://grab.com/..."
+      <p style={hintStyle}>Paste your GrabFood or Foodpanda cart link (optional)</p>
+      <input
+        placeholder="https://food.grab.com/…"
         value={draft.externalLink}
         onChange={(e) => onChange({ externalLink: e.target.value })}
-        status={error ? 'error' : undefined}
-        header={error ?? undefined}
         inputMode="url"
+        autoComplete="off"
+        style={inputStyle(!!error)}
+        aria-label="Order link"
       />
+      {error && <p style={{ color: theme.error, fontSize: 11, marginTop: 4 }}>{error}</p>}
     </div>
   );
 }
 
-/**
- * Step 3: Select maximum number of members via preset chips.
- *
- * @param props - StepProps.
- */
-function StepMembers({ draft, onChange }: StepProps) {
+function StepMembers({ draft, onChange, error }: StepProps) {
+  const isCustomSelected = draft.maxMembers !== null &&
+    !MEMBER_PRESETS.includes(draft.maxMembers as typeof MEMBER_PRESETS[number]);
+  const isNoLimit = draft.maxMembers === null;
+
+  function selectPreset(n: number) {
+    onChange({ maxMembers: n, customMembers: '' });
+  }
+  function selectNoLimit() {
+    onChange({ maxMembers: null, customMembers: '' });
+  }
+  function selectCustom() {
+    onChange({ maxMembers: -1, customMembers: '' });
+  }
+
   return (
     <div>
-      <p style={hintStyle}>How many people in your group?</p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <p style={hintStyle}>How many people can join?</p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
         {MEMBER_PRESETS.map((n) => (
-          <button
-            key={n}
-            onClick={() => onChange({ maxMembers: n })}
-            style={chipStyle(draft.maxMembers === n)}
-          >
+          <button key={n} onClick={() => selectPreset(n)} style={chipStyle(draft.maxMembers === n)}>
             {n}
           </button>
         ))}
+        <button onClick={selectNoLimit} style={chipStyle(isNoLimit)}>No Limit</button>
+        <button onClick={selectCustom} style={chipStyle(isCustomSelected)}>Custom</button>
       </div>
+      {isCustomSelected && (
+        <input
+          type="number"
+          min={2}
+          placeholder="Enter number (min 2)"
+          value={draft.customMembers}
+          onChange={(e) => {
+            const val = e.target.value;
+            onChange({ customMembers: val, maxMembers: val ? Math.max(2, parseInt(val, 10)) : -1 });
+          }}
+          style={inputStyle(!!error)}
+          aria-label="Custom member count"
+        />
+      )}
+      {error && <p style={{ color: theme.error, fontSize: 11, marginTop: 4 }}>{error}</p>}
     </div>
   );
 }
 
-/**
- * Step 4: Select group expiry duration via preset chips.
- *
- * @param props - StepProps.
- */
-function StepExpiry({ draft, onChange }: StepProps) {
+function StepExpiry({ draft, onChange, error }: StepProps) {
+  const isCustomSelected = draft.expiryMinutes === null;
+  const selectedValue = draft.expiryMinutes;
+
+  function selectPreset(value: number) {
+    onChange({ expiryMinutes: value, customTime: '' });
+  }
+  function selectCustom() {
+    onChange({ expiryMinutes: null, customTime: '' });
+  }
+
   return (
     <div>
-      <p style={hintStyle}>How long should the group stay open?</p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <p style={hintStyle}>Group closes after this time</p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
         {EXPIRY_PRESETS.map(({ label, value }) => (
-          <button
-            key={value}
-            onClick={() => onChange({ expiryMinutes: value })}
-            style={chipStyle(draft.expiryMinutes === value)}
-          >
+          <button key={value} onClick={() => selectPreset(value)} style={chipStyle(selectedValue === value)}>
             {label}
           </button>
         ))}
+        <button onClick={selectCustom} style={chipStyle(isCustomSelected)}>Custom</button>
       </div>
-    </div>
-  );
-}
-
-/**
- * Confirmation screen summarising the draft before submission.
- *
- * @param draft - The completed group draft.
- */
-function StepConfirm({ draft }: { draft: GroupDraft }) {
-  const expiryLabel =
-    EXPIRY_PRESETS.find((p) => p.value === draft.expiryMinutes)?.label ??
-    `${draft.expiryMinutes}m`;
-
-  return (
-    <div style={{ fontSize: 14, color: 'var(--tg-theme-text-color)', lineHeight: 1.6 }}>
-      <Row label="Title"   value={draft.title} />
-      <Row label="Link"    value={draft.externalLink || '(none)'} />
-      <Row label="Members" value={`up to ${draft.maxMembers}`} />
-      <Row label="Expires" value={`in ${expiryLabel}`} />
-    </div>
-  );
-}
-
-/** Small label-value row for the confirmation screen. */
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-      <span style={{ color: 'var(--tg-theme-hint-color)', minWidth: 72 }}>{label}</span>
-      <span style={{ wordBreak: 'break-all' }}>{value}</span>
+      {isCustomSelected && (
+        <div>
+          <input
+            type="time"
+            value={draft.customTime}
+            onChange={(e) => onChange({ customTime: e.target.value })}
+            style={inputStyle(!!error)}
+            aria-label="Custom close time"
+          />
+          {draft.customTime && (
+            <p style={{ fontSize: 12, color: theme.textSecondary, marginTop: 4 }}>
+              Closes at {draft.customTime}
+            </p>
+          )}
+        </div>
+      )}
+      {error && <p style={{ color: theme.error, fontSize: 11, marginTop: 4 }}>{error}</p>}
     </div>
   );
 }
 
 // ── Validation ────────────────────────────────────────────────────────────────
 
-/**
- * Validates the draft for a specific step.
- *
- * @param step - Current step index (0-based).
- * @param draft - The current draft state.
- * @returns Error message string, or null if valid.
- */
 function validateStep(step: number, draft: GroupDraft): string | null {
-  if (step === 0 && (!draft.title.trim() || draft.title.length > 60)) {
-    return 'Title must be 1–60 characters';
+  if (step === 0) {
+    if (!draft.title.trim()) return 'Please enter a name';
+    if (draft.title.length > 60) return 'Name must be under 60 characters';
   }
-  if (step === 1 && draft.externalLink && !draft.externalLink.startsWith('http')) {
-    return 'Link must start with http';
+  if (step === 1) {
+    if (draft.externalLink && !draft.externalLink.startsWith('http')) return 'Link must start with http';
+  }
+  if (step === 2) {
+    if (draft.maxMembers === -1) return 'Please enter a valid number (min 2)';
+  }
+  if (step === 3) {
+    if (draft.expiryMinutes === null) {
+      if (!draft.customTime) return 'Please pick a time';
+      const [h, m] = draft.customTime.split(':').map(Number);
+      const chosen = new Date();
+      chosen.setHours(h, m, 0, 0);
+      if (chosen.getTime() - Date.now() < 15 * 60 * 1000) return 'Must be at least 15 minutes from now';
+    }
   }
   return null;
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const hintStyle: React.CSSProperties = {
-  fontSize: 13,
-  color: 'var(--tg-theme-hint-color)',
-  marginBottom: 10,
-};
-
-function chipStyle(selected: boolean): React.CSSProperties {
-  return {
-    padding: '8px 20px',
-    borderRadius: 20,
-    border: selected
-      ? '2px solid var(--tg-theme-button-color)'
-      : '2px solid var(--tg-theme-hint-color)',
-    background: selected ? 'var(--tg-theme-button-color)' : 'transparent',
-    color: selected ? 'var(--tg-theme-button-text-color)' : 'var(--tg-theme-text-color)',
-    fontWeight: 600,
-    fontSize: 14,
-    cursor: 'pointer',
-  };
+function resolveExpiryMinutes(draft: GroupDraft): number {
+  if (draft.expiryMinutes !== null) return draft.expiryMinutes;
+  const [h, m] = draft.customTime.split(':').map(Number);
+  const chosen = new Date();
+  chosen.setHours(h, m, 0, 0);
+  return Math.max(1, Math.round((chosen.getTime() - Date.now()) / 60_000));
 }
+
+// ── Progress bar ─────────────────────────────────────────────────────────────
+
+function ProgressBar({ step, total }: { step: number; total: number }) {
+  return (
+    <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginBottom: 20 }}>
+      {Array.from({ length: total }).map((_, i) => (
+        <div key={i} style={{
+          flex: 1, height: 4, borderRadius: 2,
+          background: i <= step ? theme.accent : theme.border,
+          transition: 'background 0.2s',
+        }} />
+      ))}
+      <span style={{ fontSize: 11, color: theme.textMuted, whiteSpace: 'nowrap', marginLeft: 4 }}>
+        {step + 1} of {total}
+      </span>
+    </div>
+  );
+}
+
+const STEP_HEADINGS = [
+  'What are you ordering?',
+  'Paste your order link',
+  'How many spots?',
+  'When does it close?',
+];
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-const STEP_TITLES = ["What's the order?", 'Add a link', 'Group size', 'Expiry', 'Confirm'];
-
-/** Props for CreateGroupStepper. */
 interface CreateGroupStepperProps {
-  /** Called with the newly created group on success. */
   onCreated: (group: FoodGroup) => void;
 }
 
-/**
- * Multi-step group creation wizard.
- * Validates each step locally before advancing; submits on the final confirm step.
- *
- * @param props - CreateGroupStepperProps.
- * @returns A self-contained stepper UI with navigation buttons.
- */
 export function CreateGroupStepper({ onCreated }: CreateGroupStepperProps) {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<GroupDraft>({
     title: '',
     externalLink: '',
     maxMembers: 4,
+    customMembers: '',
     expiryMinutes: 60,
+    customTime: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  /** Patches the draft and clears the error for the current field. */
   function handleChange(patch: Partial<GroupDraft>) {
     setDraft((d) => ({ ...d, ...patch }));
     setError(null);
   }
 
-  /** Advances to the next step after validating the current one. */
   function handleNext() {
     const err = validateStep(step, draft);
     if (err) { setError(err); return; }
     setStep((s) => s + 1);
   }
 
-  /** Submits the completed draft to the API. */
   async function handleSubmit() {
+    const err = validateStep(step, draft);
+    if (err) { setError(err); return; }
     setLoading(true);
     setError(null);
     try {
-      const group = await createGroup(draft);
+      const group = await createGroup({
+        title: draft.title.trim(),
+        externalLink: draft.externalLink.trim(),
+        maxMembers: draft.maxMembers === -1 ? null : draft.maxMembers,
+        expiryMinutes: resolveExpiryMinutes(draft),
+      });
       onCreated(group);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create group');
@@ -251,45 +299,54 @@ export function CreateGroupStepper({ onCreated }: CreateGroupStepperProps) {
   }
 
   const stepProps: StepProps = { draft, onChange: handleChange, error };
-  const isConfirm = step === 4;
+  const isLast = step === 3;
 
   return (
-    <div style={{ padding: '0 16px 24px' }}>
-      {/* Step indicator */}
-      <p style={{ ...hintStyle, marginBottom: 16 }}>
-        Step {step + 1} of {STEP_TITLES.length} · {STEP_TITLES[step]}
-      </p>
+    <div style={{ padding: '16px 16px 24px' }}>
+      <ProgressBar step={step} total={4} />
 
-      {/* Step content */}
+      <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 800, color: theme.textPrimary }}>
+        {STEP_HEADINGS[step]}
+      </h2>
+
       {step === 0 && <StepTitle {...stepProps} />}
       {step === 1 && <StepLink {...stepProps} />}
       {step === 2 && <StepMembers {...stepProps} />}
       {step === 3 && <StepExpiry {...stepProps} />}
-      {step === 4 && <StepConfirm draft={draft} />}
 
-      {/* Error from API */}
-      {isConfirm && error && (
-        <p style={{ color: 'var(--tg-theme-destructive-text-color)', fontSize: 13, marginTop: 12 }}>
-          {error}
-        </p>
+      {isLast && error && (
+        <p style={{ color: theme.error, fontSize: 13, marginTop: 8 }}>{error}</p>
       )}
 
-      {/* Navigation */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
         {step > 0 && (
-          <Button mode="outline" size="l" onClick={() => setStep((s) => s - 1)} style={{ flex: 1 }}>
-            Back
-          </Button>
+          <button
+            onClick={() => { setStep((s) => s - 1); setError(null); }}
+            style={{
+              flex: 1, padding: '11px 0', borderRadius: 10,
+              border: `1.5px solid ${theme.border}`,
+              background: 'transparent', color: theme.textSecondary,
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}
+            aria-label="Previous step"
+          >
+            ← Back
+          </button>
         )}
-        <Button
-          mode="filled"
-          size="l"
-          onClick={isConfirm ? handleSubmit : handleNext}
+        <button
+          onClick={isLast ? handleSubmit : handleNext}
           disabled={loading}
-          style={{ flex: 2 }}
+          style={{
+            flex: 2, padding: '11px 0', borderRadius: 10,
+            border: 'none',
+            background: loading ? theme.accentBorder : theme.accent,
+            color: '#fff',
+            fontSize: 13, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
+          }}
+          aria-label={isLast ? 'Create group' : 'Next step'}
         >
-          {loading ? <Spinner size="s" /> : isConfirm ? 'Create Group 🍱' : 'Next'}
-        </Button>
+          {loading ? <Spinner size="s" /> : isLast ? 'Create Group ✓' : 'Next →'}
+        </button>
       </div>
     </div>
   );
