@@ -219,7 +219,10 @@ function resolveExpiryMinutes(draft: GroupDraft): number {
   const [h, m] = draft.customTime.split(':').map(Number);
   const chosen = new Date();
   chosen.setHours(h, m, 0, 0);
-  return Math.max(1, Math.round((chosen.getTime() - Date.now()) / 60_000));
+  if (chosen.getTime() <= Date.now()) {
+    chosen.setDate(chosen.getDate() + 1);
+  }
+  return Math.round((chosen.getTime() - Date.now()) / 60_000);
 }
 
 // ── Progress bar ─────────────────────────────────────────────────────────────

@@ -98,10 +98,14 @@ export function MyGroupsPage() {
           <GroupCard
             key={g.id}
             group={g}
-            actions={[
-              { label: 'Details', style: 'outline', onClick: () => handleDetails(g) },
-              { label: 'Cancel Group', style: 'danger', onClick: () => handleCancel(g), loading: actionLoadingId === g.id },
-            ]}
+            actions={
+              g.status === 'open' || g.status === 'full'
+                ? [
+                    { label: 'Details', style: 'outline', onClick: () => handleDetails(g) },
+                    { label: 'Cancel Group', style: 'danger', onClick: () => handleCancel(g), loading: actionLoadingId === g.id },
+                  ]
+                : [{ label: 'Details', style: 'outline', onClick: () => handleDetails(g) }]
+            }
           />
         ))}
 
@@ -114,10 +118,14 @@ export function MyGroupsPage() {
           <GroupCard
             key={g.id}
             group={g}
-            actions={[
-              { label: 'Details', style: 'outline', onClick: () => handleDetails(g) },
-              { label: 'Leave', style: 'outline', onClick: () => handleLeave(g), loading: actionLoadingId === g.id },
-            ]}
+            actions={
+              g.status === 'open' || g.status === 'full'
+                ? [
+                    { label: 'Details', style: 'outline', onClick: () => handleDetails(g) },
+                    { label: 'Leave', style: 'outline', onClick: () => handleLeave(g), loading: actionLoadingId === g.id },
+                  ]
+                : [{ label: 'Details', style: 'outline', onClick: () => handleDetails(g) }]
+            }
           />
         ))}
       </div>
