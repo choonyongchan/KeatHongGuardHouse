@@ -42,7 +42,7 @@ function SubscriptionCell({
           ? <Spinner size="s" />
           : <Switch checked={subscribed} onChange={(e) => onToggle(e.target.checked)} />
       }
-      description="Get notified when a new group is created"
+      description="Notify me when groups open"
     >
       Notifications
     </Cell>
@@ -164,7 +164,7 @@ export function SettingsPage() {
           onClick={() => setShowFeedback(true)}
           style={{ cursor: 'pointer' }}
         >
-          Send Feedback 📣
+          Send Feedback
         </Cell>
       </Section>
 
