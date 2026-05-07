@@ -1,98 +1,134 @@
-/**
- * @fileoverview GroupCard — compact summary card for a food group in a list.
- */
-
+import type { CSSProperties } from 'react';
 import type { FoodGroup } from '../types.ts';
 import { formatCountdown } from '../lib/formatters.ts';
+import { theme } from '../lib/theme.ts';
 
-/** Props for GroupCard. */
-interface GroupCardProps {
-  /** The food group to display. */
-  group: FoodGroup;
-  /** Called when the card is tapped. */
-  onTap: (group: FoodGroup) => void;
+export interface CardAction {
+  label: string;
+  style: 'primary' | 'outline' | 'danger';
+  onClick: () => void;
+  loading?: boolean;
 }
 
-/**
- * Returns a status badge label and colour class for a group's status.
- *
- * @param status - The current group status.
- * @returns An object with a label string and a Telegram CSS variable colour.
- */
-function statusBadge(status: FoodGroup['status']): { label: string; color: string } {
+interface GroupCardProps {
+  group: FoodGroup;
+  actions?: CardAction[];
+}
+
+function statusBadge(status: FoodGroup['status']): { label: string; bg: string; color: string; border: string } {
   switch (status) {
-    case 'open':      return { label: 'Open',      color: 'var(--tg-theme-button-color)' };
-    case 'full':      return { label: 'Full',       color: 'var(--tg-theme-destructive-text-color)' };
-    case 'expired':   return { label: 'Expired',    color: 'var(--tg-theme-hint-color)' };
-    case 'cancelled': return { label: 'Cancelled',  color: 'var(--tg-theme-hint-color)' };
+    case 'open':      return { label: 'OPEN',      bg: theme.accentLight, color: theme.accent,      border: theme.accentBorder };
+    case 'full':      return { label: 'FULL',       bg: theme.errorLight,  color: theme.error,       border: theme.errorBorder };
+    case 'expired':   return { label: 'EXPIRED',    bg: '#f5f5f5',         color: theme.textMuted,   border: theme.border };
+    case 'cancelled': return { label: 'CANCELLED',  bg: '#f5f5f5',         color: theme.textMuted,   border: theme.border };
   }
 }
 
-/**
- * Renders the seat fill bar (e.g. "3 / 5").
- *
- * @param current - Current member count.
- * @param max - Maximum member count.
- * @returns Formatted seat string.
- */
-function formatSeats(current: number, max: number): string {
-  return `${current} / ${max}`;
+function platformLabel(link: string): string {
+  try {
+    const host = new URL(link).hostname;
+    if (host.includes('grab.com'))      return 'GrabFood';
+    if (host.includes('foodpanda.com')) return 'Foodpanda';
+    return host.replace('www.', '');
+  } catch {
+    return '';
+  }
 }
 
-/**
- * A tappable summary card for a food group.
- * Uses only Telegram CSS variables for colours.
- *
- * @param props - GroupCardProps.
- * @returns A div element styled as a list card.
- */
-export function GroupCard({ group, onTap }: GroupCardProps) {
+function formatSpots(current: number, max: number | null): string {
+  return max === null ? `${current} joined` : `${current} of ${max} spots`;
+}
+
+function actionButtonStyle(style: CardAction['style']): CSSProperties {
+  const base: CSSProperties = {
+    flex: style === 'primary' ? 2 : 1,
+    padding: '6px 0',
+    borderRadius: 8,
+    fontSize: 11,
+    fontWeight: 700,
+    cursor: 'pointer',
+    border: 'none',
+    textAlign: 'center',
+  };
+  if (style === 'primary') return { ...base, background: theme.accent, color: '#fff' };
+  if (style === 'danger')  return { ...base, background: 'transparent', color: theme.error, border: `1.5px solid ${theme.error}` };
+  return { ...base, background: 'transparent', color: theme.textSecondary, border: `1.5px solid ${theme.border}` };
+}
+
+export function GroupCard({ group, actions }: GroupCardProps) {
   const badge = statusBadge(group.status);
   const isActive = group.status === 'open' || group.status === 'full';
+  const platform = group.external_link ? platformLabel(group.external_link) : '';
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onTap(group)}
-      onKeyDown={(e) => e.key === 'Enter' && onTap(group)}
       style={{
-        padding: '12px 16px',
-        borderRadius: 12,
-        background: 'var(--tg-theme-secondary-bg-color)',
+        background: theme.cardBg,
+        borderRadius: 14,
+        padding: 12,
         marginBottom: 8,
-        cursor: 'pointer',
-        opacity: isActive ? 1 : 0.6,
+        boxShadow: theme.shadow,
+        opacity: isActive ? 1 : 0.55,
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <span style={{ fontWeight: 600, fontSize: 15, color: 'var(--tg-theme-text-color)', flex: 1 }}>
-          {group.title}
-        </span>
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            color: badge.color,
-            marginLeft: 8,
-            flexShrink: 0,
-          }}
-        >
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: actions?.length ? 10 : 0 }}>
+        {/* Icon box */}
+        <div style={{
+          width: 38, height: 38, borderRadius: 10,
+          background: theme.accentLight,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 18, flexShrink: 0,
+        }}>
+          🍽️
+        </div>
+
+        {/* Text */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontWeight: 700, fontSize: 13, color: theme.textPrimary,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
+            {group.title}
+          </div>
+          <div style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2 }}>
+            {formatSpots(group.current_count, group.max_members)}
+            {isActive && ` · ${formatCountdown(group.expires_at)}`}
+          </div>
+          {(group.creator_first_name || platform) && (
+            <div style={{ fontSize: 11, color: theme.textMuted, marginTop: 1 }}>
+              {[group.creator_first_name && `by ${group.creator_first_name}`, platform].filter(Boolean).join(' · ')}
+            </div>
+          )}
+        </div>
+
+        {/* Status badge */}
+        <span style={{
+          background: badge.bg, color: badge.color,
+          border: `1px solid ${badge.border}`,
+          fontSize: 9, fontWeight: 700,
+          padding: '3px 7px', borderRadius: 20, flexShrink: 0,
+        }}>
           {badge.label}
         </span>
       </div>
 
-      <div style={{
-        display: 'flex',
-        gap: 12,
-        marginTop: 4,
-        fontSize: 13,
-        color: 'var(--tg-theme-hint-color)',
-      }}>
-        <span>👤 {formatSeats(group.current_count, group.max_members)}</span>
-        {isActive && <span>⏱ {formatCountdown(group.expires_at)}</span>}
-        <span>by {group.creator_first_name}</span>
-      </div>
+      {/* Action buttons */}
+      {actions && actions.length > 0 && (
+        <div style={{ display: 'flex', gap: 7 }}>
+          {actions.map((action) => (
+            <button
+              key={action.label}
+              onClick={action.onClick}
+              disabled={action.loading}
+              style={actionButtonStyle(action.style)}
+              aria-label={action.label}
+            >
+              {action.loading ? '…' : action.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
