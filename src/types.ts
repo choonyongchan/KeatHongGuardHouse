@@ -1,44 +1,48 @@
-import type { Context, SessionFlavor } from 'grammy'
-import type { ConversationFlavor } from '@grammyjs/conversations'
+/**
+ * @fileoverview Shared TypeScript interfaces for the KeatHong MiniApp.
+ * These mirror the bot's data model exactly.
+ */
 
-export interface User {
-  telegramId: number
-  username: string | null
-  firstName: string
-  subscribed: boolean
-  createdAt: Date
-}
+/** Status values a food group can have throughout its lifecycle. */
+export type GroupStatus = 'open' | 'full' | 'expired' | 'cancelled';
 
+/** A food group as returned by the API. */
 export interface FoodGroup {
-  id: number
-  code: string
-  creatorId: number
-  title: string
-  externalLink: string
-  maxMembers: number
-  currentCount: number
-  expiresAt: Date
-  status: 'open' | 'full' | 'expired' | 'cancelled'
-  expiryWarned: boolean
-  createdAt: Date
+  id: number;
+  code: string;
+  creator_id: number;
+  creator_first_name: string;
+  creator_username: string | null;
+  title: string;
+  external_link: string;
+  max_members: number;
+  current_count: number;
+  expires_at: string;
+  status: GroupStatus;
+  expiry_warned: boolean;
+  created_at: string;
 }
 
+/** A group member as returned inside a group detail response. */
 export interface GroupMember {
-  groupId: number
-  userId: number
-  username: string | null
-  firstName: string
-  joinedAt: Date
+  group_id: number;
+  user_id: number;
+  first_name: string;
+  username: string | null;
+  joined_at: string;
 }
 
-export type Result<T> =
-  | { ok: true;  data: T }
-  | { ok: false; error: string }
+/** A food group with its full member list attached. */
+export interface FoodGroupDetail extends FoodGroup {
+  members: GroupMember[];
+}
 
-export const ok  = <T>(data: T): Result<T>      => ({ ok: true,  data })
-export const err = (error: string): Result<never> => ({ ok: false, error })
-
-interface SessionData {}
-type BaseContext           = Context & SessionFlavor<SessionData>
-export type MyContext      = ConversationFlavor<BaseContext>
-export type MyConversation = import('@grammyjs/conversations').Conversation<MyContext, MyContext>
+/** The authenticated user's profile returned by GET /api/users/me. */
+export interface UserProfile {
+  id: number;
+  firstName: string;
+  username: string | null;
+  subscribed: boolean;
+  createdGroups: FoodGroup[];
+  joinedGroups: FoodGroup[];
+}

@@ -1,24 +1,42 @@
 {
-  "name": "keathongguardhouse",
-  "version": "1.0.0",
+  "name": "keathong-guardhouse-miniapp",
+  "private": true,
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/bot.ts",
-    "start": "bun src/bot.ts",
-    "test": "bunx vitest run",
-    "build": "bun build src/bot.ts --outdir dist --target bun"
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "grammy": "^1.42.0",
-    "@grammyjs/conversations": "^2.1.1",
-    "pg": "^8.20.0",
-    "zod": "^4.4.3",
-    "node-cron": "^4.2.1",
-    "dotenv": "^17.4.2"
+    "@telegram-apps/telegram-ui": "^2.1.13",
+    "@tma.js/sdk-react": "^3.0.19",
+    "@vercel/postgres": "^0.10.0",
+    "eruda": "^3.4.3",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-router-dom": "^7.15.0",
+    "swr": "^2.4.1"
   },
   "devDependencies": {
-    "typescript": "^6.0.3",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^25.6.0",
-    "@types/pg": "^8.20.0"
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.59.2",
+    "@typescript-eslint/parser": "^8.59.2",
+    "@vitejs/plugin-react-swc": "^4.3.0",
+    "cross-env": "^10.1.0",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.6.0",
+    "terser": "^5.46.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.2",
+    "vite": "^8.0.10",
+    "vite-plugin-mkcert": "^2.0.0"
   }
 }
