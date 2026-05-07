@@ -82,13 +82,23 @@ All existing `var(--tg-theme-*)` usages for accent/status colors are replaced wi
 |---|---|---|
 | 1 | What are you ordering? | Free-text input for group name |
 | 2 | Paste your order link | URL input (GrabFood / Foodpanda) |
-| 3 | How many spots? | Chip selector: 2 3 4 5 6 |
-| 4 | When does it close? | Chip selector: 30m 1h 2h 4h · button becomes "Create Group ✓" |
+| 3 | How many spots? | Chip selector: 2 3 4 5 6 + "No Limit" |
+| 4 | When does it close? | Chip selector: 30m 1h 2h 4h + "Custom" · button becomes "Create Group ✓" |
 
 - Progress bar: 4 filled segments, `1 of 4` counter on right
 - Step titles shorter and action-oriented (see copy table below)
 - Back/Next buttons: Back = outline, Next/Create = filled green
 - On step 4, Next becomes "Create Group ✓" and submits directly
+
+**Step 3 — Spots:**
+- Chips: `2` `3` `4` `5` `6` `No Limit`
+- "No Limit" maps to `null` / unlimited in the API payload (`max_members = null`)
+
+**Step 4 — Expiry:**
+- Chips: `30m` `1h` `2h` `4h` `Custom`
+- Selecting "Custom" reveals a time picker input (HTML `<input type="time">`) for the user to choose a specific clock time for expiry (same day)
+- Displayed as "Closes at HH:MM" below the picker once selected
+- Validation: chosen time must be at least 15 minutes in the future
 
 ### `MyGroupsPage.tsx`
 - Page header: bold "My Groups" title
@@ -121,8 +131,8 @@ All existing `var(--tg-theme-*)` usages for accent/status colors are replaced wi
 | No groups found. Be the first to create one! | No open groups. Start one? |
 | What would you like to name your food group? | What are you ordering? |
 | Please enter the GrabFood or Foodpanda URL for the group order | Paste your order link |
-| How many people are in your group? | How many spots? |
-| When should the group expire? | When does it close? |
+| How many people are in your group? | How many spots? (2–6 or No Limit) |
+| When should the group expire? | When does it close? (30m/1h/2h/4h or Custom time) |
 | Review your group details | *(removed — no confirm step)* |
 | Create Food Group | Create Group ✓ |
 | Open GrabFood / Order Link | Open {platform} link → |
