@@ -38,6 +38,7 @@ function AppTabbar() {
           text={route.tabLabel}
           selected={location.pathname === route.path}
           onClick={() => handleSelect(route.path)}
+          style={location.pathname === route.path ? { color: '#22c55e' } : undefined}
         >
           <span style={{ fontSize: 20 }}>{route.tabIcon}</span>
         </Tabbar.Item>
