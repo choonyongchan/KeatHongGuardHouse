@@ -1,23 +1,16 @@
-/**
- * @fileoverview BrowsePage — Tab 1. Lists open/full groups; supports join-by-code lookup.
- */
-
 import { useState } from 'react';
 import useSWR from 'swr';
-import { Spinner, Placeholder } from '@telegram-apps/telegram-ui';
+import { Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback, useSignal, initData } from '@tma.js/sdk-react';
+import { useNavigate } from 'react-router-dom';
 
-import { getGroups, getGroup } from '../lib/api.ts';
+import { getGroups, getGroup, joinGroup } from '../lib/api.ts';
 import type { FoodGroup, FoodGroupDetail } from '../types.ts';
 import { GroupCard } from '../components/GroupCard.tsx';
 import { GroupDetailSheet } from '../components/GroupDetailSheet.tsx';
 import { JoinByCodeInput } from '../components/JoinByCodeInput.tsx';
+import { theme } from '../lib/theme.ts';
 
-/**
- * Renders an inline loading spinner centred in the page.
- *
- * @returns A flex container with a Spinner.
- */
 function LoadingState() {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 48 }}>
@@ -26,82 +19,103 @@ function LoadingState() {
   );
 }
 
-/**
- * Renders a friendly empty state when no groups are available.
- *
- * @returns A Placeholder component with instructional copy.
- */
-function EmptyState() {
-  return (
-    <Placeholder
-      header="No open groups yet"
-      description="Be the first! Switch to the Create tab to start a new group order."
-    />
-  );
-}
-
-/**
- * Browse tab — shows all open/full food groups with SWR polling.
- * Users can tap a card to open GroupDetailSheet, or look up a group by code.
- *
- * @returns The browse page JSX element.
- */
 export function BrowsePage() {
   const { data: groups, error, mutate } = useSWR<FoodGroup[]>('/api/groups', getGroups, {
     refreshInterval: 30_000,
   });
 
   const [selected, setSelected] = useState<FoodGroupDetail | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-
+  const [joiningId, setJoiningId] = useState<number | null>(null);
   const userId = useSignal(initData.user)?.id ?? 0;
+  const navigate = useNavigate();
 
-  /**
-   * Fetches and opens the detail sheet for a tapped group card.
-   *
-   * @param group - The tapped group.
-   */
-  async function handleCardTap(group: FoodGroup) {
+  async function handleDetails(group: FoodGroup) {
     hapticFeedback.impactOccurred('light');
-    setLoadingDetail(true);
     try {
       const detail = await getGroup(group.code);
       setSelected(detail);
-    } finally {
-      setLoadingDetail(false);
+    } catch {
+      // ignore
     }
   }
 
-  /**
-   * Called when a group is found via the code input.
-   *
-   * @param group - The looked-up group detail.
-   */
+  async function handleJoin(group: FoodGroup) {
+    hapticFeedback.impactOccurred('medium');
+    setJoiningId(group.id);
+    try {
+      await joinGroup(group.code);
+      hapticFeedback.notificationOccurred('success');
+      void mutate();
+    } catch {
+      hapticFeedback.notificationOccurred('error');
+    } finally {
+      setJoiningId(null);
+    }
+  }
+
   function handleGroupFound(group: FoodGroupDetail) {
     hapticFeedback.impactOccurred('light');
     setSelected(group);
   }
 
-  return (
-    <div style={{ paddingBottom: 80 }}>
-      <JoinByCodeInput onGroupFound={handleGroupFound} />
+  const openCount = groups?.filter((g) => g.status === 'open').length ?? 0;
 
-      <div style={{ padding: '12px 16px 0' }}>
+  return (
+    <div style={{ paddingBottom: 80, paddingTop: 16 }}>
+      {/* Header */}
+      <div style={{ padding: '0 16px 12px' }}>
+        <div style={{ fontWeight: 800, fontSize: 22, color: theme.textPrimary }}>Browse</div>
+        <div style={{ fontSize: 13, color: theme.textSecondary, marginTop: 2 }}>
+          {groups
+            ? openCount > 0 ? `${openCount} group${openCount === 1 ? '' : 's'} open` : 'No open groups'
+            : ''}
+        </div>
+      </div>
+
+      {/* Join by code */}
+      <div style={{ marginBottom: 12 }}>
+        <JoinByCodeInput onGroupFound={handleGroupFound} />
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: '0 16px' }}>
         {!groups && !error && <LoadingState />}
+
         {error && (
-          <p style={{ color: 'var(--tg-theme-destructive-text-color)', textAlign: 'center', marginTop: 32 }}>
+          <p style={{ color: theme.error, textAlign: 'center', marginTop: 32, fontSize: 13 }}>
             Failed to load groups.
           </p>
         )}
-        {groups && groups.length === 0 && <EmptyState />}
-        {groups && groups.length > 0 && (
-          <>
-            {loadingDetail && <LoadingState />}
-            {groups.map((g) => (
-              <GroupCard key={g.id} group={g} onTap={handleCardTap} />
-            ))}
-          </>
+
+        {groups && groups.length === 0 && (
+          <div style={{ textAlign: 'center', paddingTop: 48 }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: theme.textPrimary, marginBottom: 8 }}>
+              No open groups. Start one?
+            </div>
+            <button
+              onClick={() => navigate('/create')}
+              style={{
+                background: theme.accent, color: '#fff',
+                border: 'none', borderRadius: 10,
+                padding: '10px 24px', fontSize: 13,
+                fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              Create a Group
+            </button>
+          </div>
         )}
+
+        {groups && groups.map((g) => (
+          <GroupCard
+            key={g.id}
+            group={g}
+            actions={g.status === 'open' ? [
+              { label: 'Details', style: 'outline', onClick: () => handleDetails(g) },
+              { label: 'Join', style: 'primary', onClick: () => handleJoin(g), loading: joiningId === g.id },
+            ] : undefined}
+          />
+        ))}
       </div>
 
       {selected && (
