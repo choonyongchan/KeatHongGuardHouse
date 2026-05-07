@@ -1,47 +1,26 @@
-/**
- * @fileoverview JoinByCodeInput — inline form to join a group by entering its code.
- */
-
+// miniapp/src/components/JoinByCodeInput.tsx
 import { useState } from 'react';
-import { Input, Button, Spinner } from '@telegram-apps/telegram-ui';
+import { Spinner } from '@telegram-apps/telegram-ui';
 import { getGroup } from '../lib/api.ts';
 import type { FoodGroupDetail } from '../types.ts';
+import { theme } from '../lib/theme.ts';
 
-/** Props for JoinByCodeInput. */
 interface JoinByCodeInputProps {
-  /** Called with the fetched group when a valid code is looked up. */
   onGroupFound: (group: FoodGroupDetail) => void;
 }
 
-/**
- * Normalises a raw code input: uppercase, strip non-alpha characters.
- *
- * @param raw - Raw user input string.
- * @returns Sanitised uppercase code.
- */
 function sanitiseCode(raw: string): string {
   return raw.toUpperCase().replace(/[^A-Z]/g, '');
 }
 
-/**
- * Inline code-entry form. On submit fetches the group and passes it to `onGroupFound`.
- * Does not perform the join — the caller decides when to join via GroupDetailSheet.
- *
- * @param props - JoinByCodeInputProps.
- * @returns A form with a text input and submit button.
- */
 export function JoinByCodeInput({ onGroupFound }: JoinByCodeInputProps) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Fetches the group for the entered code and forwards it to the parent.
-   */
   async function handleLookup() {
     const clean = sanitiseCode(code);
     if (!clean) return;
-
     setLoading(true);
     setError(null);
     try {
@@ -56,27 +35,50 @@ export function JoinByCodeInput({ onGroupFound }: JoinByCodeInputProps) {
   }
 
   return (
-    <div style={{ padding: '8px 16px 0' }}>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-        <Input
-          placeholder="Enter code (e.g. MANGO)"
+    <div style={{ padding: '0 16px', marginBottom: 4 }}>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          placeholder="Have a code? Enter it…"
           value={code}
           onChange={(e) => { setCode(e.target.value); setError(null); }}
           onKeyDown={(e) => e.key === 'Enter' && void handleLookup()}
-          status={error ? 'error' : undefined}
-          header={error ?? undefined}
-          style={{ flex: 1 }}
+          autoComplete="off"
+          spellCheck={false}
+          style={{
+            flex: 1,
+            border: `1.5px solid ${error ? theme.error : theme.border}`,
+            borderRadius: 10,
+            padding: '8px 12px',
+            fontSize: 13,
+            background: theme.cardBg,
+            color: theme.textPrimary,
+            outline: 'none',
+          }}
+          aria-label="Group invite code"
         />
-        <Button
-          size="m"
-          mode="filled"
+        <button
           onClick={handleLookup}
           disabled={loading || !sanitiseCode(code)}
-          style={{ flexShrink: 0, marginTop: 6 }}
+          style={{
+            background: theme.accent,
+            color: '#fff',
+            border: 'none',
+            borderRadius: 10,
+            padding: '8px 16px',
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: loading || !sanitiseCode(code) ? 'not-allowed' : 'pointer',
+            opacity: loading || !sanitiseCode(code) ? 0.6 : 1,
+            flexShrink: 0,
+          }}
+          aria-label="Look up group by code"
         >
-          {loading ? <Spinner size="s" /> : 'Find'}
-        </Button>
+          {loading ? <Spinner size="s" /> : 'Go'}
+        </button>
       </div>
+      {error && (
+        <p style={{ color: theme.error, fontSize: 11, margin: '4px 0 0' }}>{error}</p>
+      )}
     </div>
   );
 }
