@@ -1,4 +1,5 @@
 // miniapp/src/components/GroupCard.tsx
+import type { CSSProperties } from 'react';
 import type { FoodGroup } from '../types.ts';
 import { formatCountdown } from '../lib/formatters.ts';
 import { theme } from '../lib/theme.ts';
@@ -39,8 +40,8 @@ function formatSpots(current: number, max: number | null): string {
   return max === null ? `${current} joined` : `${current} of ${max} spots`;
 }
 
-function actionButtonStyle(style: CardAction['style']): React.CSSProperties {
-  const base: React.CSSProperties = {
+function actionButtonStyle(style: CardAction['style']): CSSProperties {
+  const base: CSSProperties = {
     flex: style === 'primary' ? 2 : 1,
     padding: '6px 0',
     borderRadius: 8,
@@ -116,9 +117,9 @@ export function GroupCard({ group, actions }: GroupCardProps) {
       {/* Action buttons */}
       {actions && actions.length > 0 && (
         <div style={{ display: 'flex', gap: 7 }}>
-          {actions.map((action) => (
+          {actions.map((action, i) => (
             <button
-              key={action.label}
+              key={i}
               onClick={action.onClick}
               disabled={action.loading}
               style={actionButtonStyle(action.style)}
