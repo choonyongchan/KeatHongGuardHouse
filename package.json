@@ -21,9 +21,11 @@
     "react": "latest",
     "react-dom": "latest",
     "react-router-dom": "latest",
-    "swr": "latest"
+    "swr": "latest",
+    "@vercel/node": "latest"
   },
   "devDependencies": {
+    "@vercel/node": "latest",  
     "@eslint/js": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
