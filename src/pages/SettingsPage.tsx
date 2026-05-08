@@ -130,20 +130,19 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
 export function SettingsPage() {
   const { data, mutate } = useSWR<UserProfile>('/api/users/me', getMe);
   const [toggleLoading, setToggleLoading] = useState(false);
+  const [toggleError, setToggleError] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
 
-  /**
-   * Toggles the notification subscription and updates the SWR cache.
-   *
-   * @param val - The desired subscription state.
-   */
   async function handleToggle(val: boolean) {
     if (!data) return;
     setToggleLoading(true);
+    setToggleError(null);
     try {
       hapticFeedback.impactOccurred('light');
       await setSubscription(val);
       await mutate({ ...data, subscribed: val }, false);
+    } catch (e) {
+      setToggleError(e instanceof Error ? e.message : 'Failed to update subscription');
     } finally {
       setToggleLoading(false);
     }
@@ -157,6 +156,11 @@ export function SettingsPage() {
           onToggle={handleToggle}
           loading={toggleLoading}
         />
+        {toggleError && (
+          <div style={{ padding: '4px 16px 8px', fontSize: 12, color: '#ef4444' }}>
+            {toggleError}
+          </div>
+        )}
       </Section>
 
       <Section header="Support">

@@ -38,7 +38,15 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   };
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
-  const json = await res.json() as T & { error?: string };
+  const text = await res.text();
+  if (!text) throw new Error(`HTTP ${res.status}: empty response from server`);
+
+  let json: T & { error?: string };
+  try {
+    json = JSON.parse(text) as T & { error?: string };
+  } catch {
+    throw new Error(`HTTP ${res.status}: unexpected response from server`);
+  }
 
   if (!res.ok) throw new Error((json as { error: string }).error ?? `HTTP ${res.status}`);
   return json;

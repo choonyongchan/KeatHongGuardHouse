@@ -55,6 +55,10 @@ export async function ensureSchema(): Promise<void> {
   `;
 
   await sql`
+    ALTER TABLE food_groups ALTER COLUMN max_members DROP NOT NULL
+  `.catch(() => { /* column may already be nullable or table not yet created */ });
+
+  await sql`
     CREATE TABLE IF NOT EXISTS feedback (
       id          SERIAL PRIMARY KEY,
       user_id     BIGINT NOT NULL REFERENCES users(telegram_id),

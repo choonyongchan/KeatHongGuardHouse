@@ -3,7 +3,7 @@
  */
 
 import { Navigate, Route, Routes, HashRouter, useLocation, useNavigate } from 'react-router-dom';
-import { useLaunchParams, useSignal, miniApp, hapticFeedback } from '@tma.js/sdk-react';
+import { useLaunchParams, hapticFeedback } from '@tma.js/sdk-react';
 import { AppRoot, Tabbar } from '@telegram-apps/telegram-ui';
 
 import { routes } from '@/navigation/routes.tsx';
@@ -56,11 +56,10 @@ function AppTabbar() {
  */
 export function App() {
   const lp = useLaunchParams();
-  const isDark = useSignal(miniApp.isDark);
 
   return (
     <AppRoot
-      appearance={isDark ? 'dark' : 'light'}
+      appearance="light"
       platform={['macos', 'ios'].includes(lp.tgWebAppPlatform) ? 'ios' : 'base'}
     >
       <HashRouter>

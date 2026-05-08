@@ -57,12 +57,12 @@ async function addMember(
   groupId: number,
   userId: number,
   newCount: number,
-  maxMembers: number,
+  maxMembers: number | null,
 ): Promise<void> {
   await sql`
     INSERT INTO group_members (group_id, user_id) VALUES (${groupId}, ${userId})
   `;
-  const newStatus = newCount >= maxMembers ? 'full' : 'open';
+  const newStatus = maxMembers !== null && newCount >= maxMembers ? 'full' : 'open';
   await sql`
     UPDATE food_groups
     SET current_count = ${newCount}, status = ${newStatus}

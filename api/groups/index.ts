@@ -46,9 +46,13 @@ function parseCreateBody(body: Record<string, unknown>) {
     throw new ApiError(400, 'External link must start with http');
   }
 
-  const maxMembers = Number(body.maxMembers);
-  if (!Number.isInteger(maxMembers) || maxMembers < 2 || maxMembers > 20) {
-    throw new ApiError(400, 'maxMembers must be an integer between 2 and 20');
+  let maxMembers: number | null = null;
+  if (body.maxMembers !== null && body.maxMembers !== undefined) {
+    const n = Number(body.maxMembers);
+    if (!Number.isInteger(n) || n < 2 || n > 50) {
+      throw new ApiError(400, 'maxMembers must be an integer between 2 and 50, or null for no limit');
+    }
+    maxMembers = n;
   }
 
   const expiryMinutes = Number(body.expiryMinutes);
@@ -75,7 +79,7 @@ async function insertGroup(
   creatorId: number,
   title: string,
   externalLink: string,
-  maxMembers: number,
+  maxMembers: number | null,
   expiryMinutes: number,
   code: string,
 ) {
