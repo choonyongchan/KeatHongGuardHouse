@@ -56,7 +56,7 @@ export function JoinByCodeInput({ onGroupFound }: JoinByCodeInputProps) {
           aria-label="Group invite code"
         />
         <button
-          onClick={handleLookup}
+          onClick={() => void handleLookup()}
           disabled={loading || !sanitiseCode(code)}
           style={{
             background: theme.accent,

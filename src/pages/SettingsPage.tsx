@@ -109,7 +109,7 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
                 mode="filled"
                 size="l"
                 stretched
-                onClick={handleSubmit}
+                onClick={() => void handleSubmit()}
                 disabled={loading || !message.trim()}
               >
                 {loading ? <Spinner size="s" /> : 'Submit'}
@@ -153,7 +153,7 @@ export function SettingsPage() {
       <Section header="Notifications">
         <SubscriptionCell
           subscribed={data?.subscribed ?? false}
-          onToggle={handleToggle}
+          onToggle={(val) => void handleToggle(val)}
           loading={toggleLoading}
         />
         {toggleError && (

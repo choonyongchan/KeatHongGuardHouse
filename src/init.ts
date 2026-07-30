@@ -22,11 +22,11 @@ import {
 /**
  * Initializes the application and configures its dependencies.
  */
-export async function init(options: {
+export function init(options: {
   debug: boolean;
   eruda: boolean;
   mockForMacOS: boolean;
-}): Promise<void> {
+}): void {
   // Set @telegram-apps/sdk-react debug mode and initialize it.
   setDebug(options.debug);
   initSDK();
@@ -75,7 +75,7 @@ export async function init(options: {
   }
 
   if (viewport.mount.isAvailable()) {
-    viewport.mount().then(() => {
+    void viewport.mount().then(() => {
       viewport.bindCssVars();
     });
   }

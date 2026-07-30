@@ -26,7 +26,7 @@ function AppTabbar() {
   function handleSelect(path: string) {
     if (location.pathname !== path) {
       hapticFeedback.selectionChanged();
-      navigate(path);
+      void navigate(path);
     }
   }
 

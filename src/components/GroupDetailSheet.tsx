@@ -140,7 +140,7 @@ export function GroupDetailSheet({ group, currentUserId, onClose, onMutated }: G
         {/* Action button */}
         {action && (
           <button
-            onClick={handleAction}
+            onClick={() => void handleAction()}
             disabled={loading}
             aria-label={actionLabel}
             style={{

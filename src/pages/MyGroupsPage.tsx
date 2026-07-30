@@ -27,7 +27,7 @@ function EmptySectionNote({ message }: { message: string }) {
 }
 
 export function MyGroupsPage() {
-  const { data, error, mutate } = useSWR<UserProfile>('/api/users/me', getMe, {
+  const { data, error, mutate } = useSWR<UserProfile, Error>('/api/users/me', getMe, {
     refreshInterval: 30_000,
   });
   const [selected, setSelected] = useState<FoodGroupDetail | null>(null);
@@ -98,8 +98,8 @@ export function MyGroupsPage() {
             key={g.id}
             group={g}
             actions={[
-              { label: 'Details', style: 'outline', onClick: () => handleDetails(g) },
-              { label: 'Cancel Group', style: 'danger', onClick: () => handleCancel(g), loading: actionLoadingId === g.id },
+              { label: 'Details', style: 'outline', onClick: () => void handleDetails(g) },
+              { label: 'Cancel Group', style: 'danger', onClick: () => void handleCancel(g), loading: actionLoadingId === g.id },
             ]}
           />
         ))}
@@ -114,8 +114,8 @@ export function MyGroupsPage() {
             key={g.id}
             group={g}
             actions={[
-              { label: 'Details', style: 'outline', onClick: () => handleDetails(g) },
-              { label: 'Leave', style: 'outline', onClick: () => handleLeave(g), loading: actionLoadingId === g.id },
+              { label: 'Details', style: 'outline', onClick: () => void handleDetails(g) },
+              { label: 'Leave', style: 'outline', onClick: () => void handleLeave(g), loading: actionLoadingId === g.id },
             ]}
           />
         ))}

@@ -46,7 +46,7 @@ export function CreatePage() {
             description="Fill in the details below to create a group and share it with neighbours."
             style={{ paddingBottom: 4 }}
           />
-          <CreateGroupStepper onCreated={handleCreated} />
+          <CreateGroupStepper onCreated={(group) => void handleCreated(group)} />
         </>
       )}
 

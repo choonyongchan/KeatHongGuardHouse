@@ -30,18 +30,17 @@ try {
     || import.meta.env.DEV;
 
   // Configure all application dependencies.
-  await init({
+  init({
     debug,
     eruda: debug && ['ios', 'android'].includes(platform),
     mockForMacOS: platform === 'macos',
-  })
-    .then(() => {
-      root.render(
-        <StrictMode>
-          <Root/>
-        </StrictMode>,
-      );
-    });
-} catch (e) {
+  });
+
+  root.render(
+    <StrictMode>
+      <Root/>
+    </StrictMode>,
+  );
+} catch {
   root.render(<EnvUnsupported/>);
 }

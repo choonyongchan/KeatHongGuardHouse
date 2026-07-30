@@ -20,7 +20,7 @@ function LoadingState() {
 }
 
 export function BrowsePage() {
-  const { data: groups, error, mutate } = useSWR<FoodGroup[]>('/api/groups', getGroups, {
+  const { data: groups, error, mutate } = useSWR<FoodGroup[], Error>('/api/groups', getGroups, {
     refreshInterval: 30_000,
   });
 
@@ -93,7 +93,7 @@ export function BrowsePage() {
               No open groups. Start one?
             </div>
             <button
-              onClick={() => navigate('/create')}
+              onClick={() => void navigate('/create')}
               style={{
                 background: theme.accent, color: '#fff',
                 border: 'none', borderRadius: 10,
@@ -111,8 +111,8 @@ export function BrowsePage() {
             key={g.id}
             group={g}
             actions={g.status === 'open' ? [
-              { label: 'Details', style: 'outline', onClick: () => handleDetails(g) },
-              { label: 'Join', style: 'primary', onClick: () => handleJoin(g), loading: joiningId === g.id },
+              { label: 'Details', style: 'outline', onClick: () => void handleDetails(g) },
+              { label: 'Join', style: 'primary', onClick: () => void handleJoin(g), loading: joiningId === g.id },
             ] : undefined}
           />
         ))}
