@@ -32,3 +32,5 @@ notes.md
 .claude/
 docs/
 skills-lock.json
+
+.vercel

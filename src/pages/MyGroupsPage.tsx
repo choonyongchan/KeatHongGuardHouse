@@ -39,8 +39,9 @@ export function MyGroupsPage() {
     try {
       const detail = await getGroup(group.code);
       setSelected(detail);
-    } catch {
-      // ignore
+    } catch (e) {
+      hapticFeedback.notificationOccurred('error');
+      console.error('Failed to load group details:', e);
     }
   }
 
@@ -51,8 +52,9 @@ export function MyGroupsPage() {
       await cancelGroup(group.code);
       hapticFeedback.notificationOccurred('success');
       void mutate();
-    } catch {
+    } catch (e) {
       hapticFeedback.notificationOccurred('error');
+      console.error('Failed to cancel group:', e);
     } finally {
       setActionLoadingId(null);
     }
@@ -65,8 +67,9 @@ export function MyGroupsPage() {
       await leaveGroup(group.code);
       hapticFeedback.notificationOccurred('success');
       void mutate();
-    } catch {
+    } catch (e) {
       hapticFeedback.notificationOccurred('error');
+      console.error('Failed to leave group:', e);
     } finally {
       setActionLoadingId(null);
     }

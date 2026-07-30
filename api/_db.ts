@@ -4,7 +4,15 @@
  * Schema is initialized lazily on the first call to `ensureSchema()`.
  */
 
-import { sql } from '@vercel/postgres';
+import { sql, types } from '@vercel/postgres';
+
+// Postgres BIGINT (OID 20) columns are parsed as strings by default to avoid
+// precision loss past Number.MAX_SAFE_INTEGER. Telegram user IDs (stored in
+// users.telegram_id, food_groups.creator_id, group_members.user_id,
+// feedback.user_id) are well within safe-integer range, so parse them as
+// numbers to match TelegramUser.id (api/_auth.ts) and fix creator/member
+// equality checks throughout the API and frontend.
+types.setTypeParser(20, (val) => parseInt(val, 10));
 
 let schemaReady = false;
 
