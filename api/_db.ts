@@ -4,15 +4,43 @@
  * Schema is initialized lazily on the first call to `ensureSchema()`.
  */
 
-import { sql, types } from '@vercel/postgres';
+import { sql as vercelSql, type QueryResultRow } from '@vercel/postgres';
 
-// Postgres BIGINT (OID 20) columns are parsed as strings by default to avoid
-// precision loss past Number.MAX_SAFE_INTEGER. Telegram user IDs (stored in
-// users.telegram_id, food_groups.creator_id, group_members.user_id,
-// feedback.user_id) are well within safe-integer range, so parse them as
-// numbers to match TelegramUser.id (api/_auth.ts) and fix creator/member
-// equality checks throughout the API and frontend.
-types.setTypeParser(20, (val) => parseInt(val, 10));
+type Primitive = string | number | boolean | undefined | null;
+
+// @vercel/postgres routes every query through Neon's stateless HTTP driver
+// (VercelPool.sql -> neon()), which has no type-parser hook and always
+// returns BIGINT columns as strings regardless of `types.setTypeParser`
+// (that registry only applies to real pg wire-protocol connections, which
+// this driver never uses). Coerce known BIGINT id columns
+// (users.telegram_id, food_groups.creator_id, group_members.user_id,
+// feedback.user_id) back to numbers here so `===`/`!==` comparisons against
+// TelegramUser.id (api/_auth.ts) work throughout the API and frontend.
+const BIGINT_ID_COLUMNS = new Set(['telegram_id', 'creator_id', 'user_id']);
+
+function coerceBigintIds(rows: Record<string, unknown>[]): void {
+  for (const row of rows) {
+    for (const key of Object.keys(row)) {
+      if (BIGINT_ID_COLUMNS.has(key) && typeof row[key] === 'string') {
+        row[key] = parseInt(row[key] as string, 10);
+      }
+    }
+  }
+}
+
+/**
+ * Wrapped `sql` tagged template — every route imports this (not
+ * `@vercel/postgres`'s `sql` directly), so this is the single choke point
+ * where BIGINT string-vs-number coercion happens for the whole app.
+ */
+export async function sql<O extends QueryResultRow = QueryResultRow>(
+  strings: TemplateStringsArray,
+  ...values: Primitive[]
+) {
+  const result = await vercelSql<O>(strings, ...values);
+  coerceBigintIds(result.rows as unknown as Record<string, unknown>[]);
+  return result;
+}
 
 let schemaReady = false;
 
@@ -125,6 +153,3 @@ export async function setSubscribed(telegramId: number, subscribed: boolean): Pr
     UPDATE users SET subscribed = ${subscribed} WHERE telegram_id = ${telegramId}
   `;
 }
-
-/** Re-export `sql` for use in route files that need custom queries. */
-export { sql };

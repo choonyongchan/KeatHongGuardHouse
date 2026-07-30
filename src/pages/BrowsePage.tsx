@@ -26,28 +26,35 @@ export function BrowsePage() {
 
   const [selected, setSelected] = useState<FoodGroupDetail | null>(null);
   const [joiningId, setJoiningId] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const userId = useSignal(initData.user)?.id ?? 0;
   const navigate = useNavigate();
 
   async function handleDetails(group: FoodGroup) {
     hapticFeedback.impactOccurred('light');
+    setActionError(null);
     try {
       const detail = await getGroup(group.code);
       setSelected(detail);
-    } catch {
-      // ignore
+    } catch (e) {
+      hapticFeedback.notificationOccurred('error');
+      console.error('Failed to load group details:', e);
+      setActionError(e instanceof Error ? e.message : 'Failed to load group details');
     }
   }
 
   async function handleJoin(group: FoodGroup) {
     hapticFeedback.impactOccurred('medium');
     setJoiningId(group.id);
+    setActionError(null);
     try {
       await joinGroup(group.code);
       hapticFeedback.notificationOccurred('success');
       void mutate();
-    } catch {
+    } catch (e) {
       hapticFeedback.notificationOccurred('error');
+      console.error('Failed to join group:', e);
+      setActionError(e instanceof Error ? e.message : 'Failed to join group');
     } finally {
       setJoiningId(null);
     }
@@ -79,6 +86,10 @@ export function BrowsePage() {
 
       {/* Content */}
       <div style={{ padding: '0 16px' }}>
+        {actionError && (
+          <p style={{ color: theme.error, fontSize: 13, marginBottom: 12 }}>{actionError}</p>
+        )}
+
         {!groups && !error && <LoadingState />}
 
         {error && (

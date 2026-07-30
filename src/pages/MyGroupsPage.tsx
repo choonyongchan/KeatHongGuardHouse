@@ -32,22 +32,26 @@ export function MyGroupsPage() {
   });
   const [selected, setSelected] = useState<FoodGroupDetail | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const userId = useSignal(initData.user)?.id ?? 0;
 
   async function handleDetails(group: FoodGroup) {
     hapticFeedback.impactOccurred('light');
+    setActionError(null);
     try {
       const detail = await getGroup(group.code);
       setSelected(detail);
     } catch (e) {
       hapticFeedback.notificationOccurred('error');
       console.error('Failed to load group details:', e);
+      setActionError(e instanceof Error ? e.message : 'Failed to load group details');
     }
   }
 
   async function handleCancel(group: FoodGroup) {
     hapticFeedback.impactOccurred('medium');
     setActionLoadingId(group.id);
+    setActionError(null);
     try {
       await cancelGroup(group.code);
       hapticFeedback.notificationOccurred('success');
@@ -55,6 +59,7 @@ export function MyGroupsPage() {
     } catch (e) {
       hapticFeedback.notificationOccurred('error');
       console.error('Failed to cancel group:', e);
+      setActionError(e instanceof Error ? e.message : 'Failed to cancel group');
     } finally {
       setActionLoadingId(null);
     }
@@ -63,6 +68,7 @@ export function MyGroupsPage() {
   async function handleLeave(group: FoodGroup) {
     hapticFeedback.impactOccurred('medium');
     setActionLoadingId(group.id);
+    setActionError(null);
     try {
       await leaveGroup(group.code);
       hapticFeedback.notificationOccurred('success');
@@ -70,6 +76,7 @@ export function MyGroupsPage() {
     } catch (e) {
       hapticFeedback.notificationOccurred('error');
       console.error('Failed to leave group:', e);
+      setActionError(e instanceof Error ? e.message : 'Failed to leave group');
     } finally {
       setActionLoadingId(null);
     }
@@ -91,6 +98,10 @@ export function MyGroupsPage() {
       </div>
 
       <div style={{ padding: '0 16px' }}>
+        {actionError && (
+          <p style={{ color: theme.error, fontSize: 13, marginBottom: 12 }}>{actionError}</p>
+        )}
+
         {/* LEADING */}
         <SectionLabel label="LEADING" />
         {data?.createdGroups.length === 0 && (
