@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Redesign the Telegram miniapp with clean cards, green accent, inline Join buttons, a 4-step create stepper, and concise copy throughout.
+**Goal:** Redesign the Telegram miniapp with clean cards, green accent, inline Join buttons, a 4-step create stepper, and concise copy throughout. Along the way, delete unused or redundant code.
 
-**Architecture:** Introduce a `theme.ts` constants file used by all components; redesign `GroupCard` to accept an `actions` prop so Browse and MyGroups can inject context-specific buttons; trim `CreateGroupStepper` from 5 to 4 steps with custom spots/expiry options.
+**Architecture:** Introduce a `theme.ts` constants file used by all components; redesign `GroupCard` to accept an `actions` prop so Browse and MyGroups can inject context-specific buttons; trim `CreateGroupStepper` from 5 to 4 steps with custom spots/expiry options. Use shared utilities for repeated code. 
 
-**Tech Stack:** React 19, TypeScript, `@telegram-apps/telegram-ui`, `@tma.js/sdk-react`, SWR, Vite/Bun
+**Tech Stack:** React latest, TypeScript, `@telegram-apps/telegram-ui`, `@tma.js/sdk-react`, SWR, Vite/Bun
 
 ---
 
@@ -14,30 +14,30 @@
 
 | Action | Path | Responsibility |
 |---|---|---|
-| Create | `miniapp/src/lib/theme.ts` | Color + shadow tokens |
-| Modify | `miniapp/src/types.ts` | `max_members: number \| null` |
-| Modify | `miniapp/src/lib/api.ts` | `createGroup` payload with nullable maxMembers |
-| Modify | `miniapp/src/components/GroupCard.tsx` | Redesigned card with `actions` prop |
-| Modify | `miniapp/src/components/JoinByCodeInput.tsx` | Copy + style update |
-| Modify | `miniapp/src/pages/BrowsePage.tsx` | Header, inline join wiring, empty state |
-| Modify | `miniapp/src/components/GroupDetailSheet.tsx` | Redesigned sheet layout |
-| Modify | `miniapp/src/components/CreateGroupStepper.tsx` | 4-step stepper with custom chips |
-| Modify | `miniapp/src/pages/MyGroupsPage.tsx` | LEADING/JOINED sections + card actions |
-| Modify | `miniapp/src/pages/SettingsPage.tsx` | Copy tweaks only |
-| Modify | `miniapp/src/components/App.tsx` | Active tab color |
-| Modify | `miniapp/src/index.css` | Page background color |
+| Create | `src/lib/theme.ts` | Color + shadow tokens |
+| Modify | `src/types.ts` | `max_members: number \| null` |
+| Modify | `src/lib/api.ts` | `createGroup` payload with nullable maxMembers |
+| Modify | `src/components/GroupCard.tsx` | Redesigned card with `actions` prop |
+| Modify | `src/components/JoinByCodeInput.tsx` | Copy + style update |
+| Modify | `src/pages/BrowsePage.tsx` | Header, inline join wiring, empty state |
+| Modify | `src/components/GroupDetailSheet.tsx` | Redesigned sheet layout |
+| Modify | `src/components/CreateGroupStepper.tsx` | 4-step stepper with custom chips |
+| Modify | `src/pages/MyGroupsPage.tsx` | LEADING/JOINED sections + card actions |
+| Modify | `src/pages/SettingsPage.tsx` | Copy tweaks only |
+| Modify | `src/components/App.tsx` | Active tab color |
+| Modify | `src/index.css` | Page background color |
 
 ---
 
 ## Task 1: Color Tokens
 
 **Files:**
-- Create: `miniapp/src/lib/theme.ts`
+- Create: `src/lib/theme.ts`
 
 - [ ] **Step 1: Create theme.ts**
 
 ```typescript
-// miniapp/src/lib/theme.ts
+// src/lib/theme.ts
 export const theme = {
   accent: '#22c55e',
   accentLight: '#f0fff4',
@@ -58,14 +58,14 @@ export const theme = {
 - [ ] **Step 2: Verify it compiles**
 
 ```bash
-cd miniapp && bun run build 2>&1 | head -20
+bun run build 2>&1 | head -20
 ```
 Expected: no errors (new file, unused yet — that's fine).
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add miniapp/src/lib/theme.ts
+git add src/lib/theme.ts
 git commit -m "feat: add theme color tokens"
 ```
 
@@ -74,13 +74,13 @@ git commit -m "feat: add theme color tokens"
 ## Task 2: Update Types for Nullable max_members
 
 **Files:**
-- Modify: `miniapp/src/types.ts`
+- Modify: `src/types.ts`
 
 The `max_members` field needs to accept `null` so "No Limit" groups can be represented.
 
 - [ ] **Step 1: Update FoodGroup interface**
 
-In `miniapp/src/types.ts`, change line:
+In `src/types.ts`, change line:
 ```typescript
   max_members: number;
 ```
@@ -92,14 +92,14 @@ to:
 - [ ] **Step 2: Verify build catches any type errors**
 
 ```bash
-cd miniapp && bun run build 2>&1 | head -40
+bun run build 2>&1 | head -40
 ```
 Expected: TypeScript may flag usages of `max_members` that assume it's always a number. Note any errors — they will be fixed in the component tasks below.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add miniapp/src/types.ts
+git add src/types.ts
 git commit -m "feat: allow max_members to be null for No Limit groups"
 ```
 
@@ -108,11 +108,11 @@ git commit -m "feat: allow max_members to be null for No Limit groups"
 ## Task 3: Update API Client for Nullable maxMembers
 
 **Files:**
-- Modify: `miniapp/src/lib/api.ts`
+- Modify: `src/lib/api.ts`
 
 - [ ] **Step 1: Update createGroup payload type**
 
-In `miniapp/src/lib/api.ts`, change the `createGroup` function signature from:
+In `src/lib/api.ts`, change the `createGroup` function signature from:
 ```typescript
 export function createGroup(payload: {
   title: string;
@@ -134,14 +134,14 @@ export function createGroup(payload: {
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd miniapp && bun run build 2>&1 | head -20
+bun run build 2>&1 | head -20
 ```
 Expected: no new errors.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add miniapp/src/lib/api.ts
+git add src/lib/api.ts
 git commit -m "feat: allow null maxMembers in createGroup API call"
 ```
 
@@ -150,14 +150,14 @@ git commit -m "feat: allow null maxMembers in createGroup API call"
 ## Task 4: Redesign GroupCard
 
 **Files:**
-- Modify: `miniapp/src/components/GroupCard.tsx`
+- Modify: `src/components/GroupCard.tsx`
 
 `GroupCard` gains an `actions` prop — an array of button descriptors. The `onTap` prop is removed; callers supply explicit action buttons instead.
 
 - [ ] **Step 1: Replace the full file content**
 
 ```typescript
-// miniapp/src/components/GroupCard.tsx
+// src/components/GroupCard.tsx
 import type { FoodGroup } from '../types.ts';
 import { formatCountdown } from '../lib/formatters.ts';
 import { theme } from '../lib/theme.ts';
@@ -296,14 +296,14 @@ export function GroupCard({ group, actions }: GroupCardProps) {
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd miniapp && bun run build 2>&1 | head -40
+bun run build 2>&1 | head -40
 ```
 Expected: errors in `BrowsePage.tsx` and `MyGroupsPage.tsx` because they still pass `onTap` — those are fixed in Tasks 6 and 9.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add miniapp/src/components/GroupCard.tsx
+git add src/components/GroupCard.tsx
 git commit -m "feat: redesign GroupCard with actions prop and theme tokens"
 ```
 
@@ -312,12 +312,12 @@ git commit -m "feat: redesign GroupCard with actions prop and theme tokens"
 ## Task 5: Update JoinByCodeInput Copy and Style
 
 **Files:**
-- Modify: `miniapp/src/components/JoinByCodeInput.tsx`
+- Modify: `src/components/JoinByCodeInput.tsx`
 
 - [ ] **Step 1: Replace the full file content**
 
 ```typescript
-// miniapp/src/components/JoinByCodeInput.tsx
+// src/components/JoinByCodeInput.tsx
 import { useState } from 'react';
 import { Spinner } from '@telegram-apps/telegram-ui';
 import { getGroup } from '../lib/api.ts';
@@ -406,14 +406,14 @@ export function JoinByCodeInput({ onGroupFound }: JoinByCodeInputProps) {
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd miniapp && bun run build 2>&1 | head -20
+bun run build 2>&1 | head -20
 ```
 Expected: no new errors.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add miniapp/src/components/JoinByCodeInput.tsx
+git add src/components/JoinByCodeInput.tsx
 git commit -m "feat: update JoinByCodeInput with new copy and theme styling"
 ```
 
@@ -422,14 +422,14 @@ git commit -m "feat: update JoinByCodeInput with new copy and theme styling"
 ## Task 6: Update BrowsePage
 
 **Files:**
-- Modify: `miniapp/src/pages/BrowsePage.tsx`
+- Modify: `src/pages/BrowsePage.tsx`
 
 Cards now get `actions` instead of `onTap`. The join API call is triggered directly from the card button.
 
 - [ ] **Step 1: Replace the full file content**
 
 ```typescript
-// miniapp/src/pages/BrowsePage.tsx
+// src/pages/BrowsePage.tsx
 import { useState } from 'react';
 import useSWR from 'swr';
 import { Spinner } from '@telegram-apps/telegram-ui';
@@ -566,14 +566,14 @@ export function BrowsePage() {
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd miniapp && bun run build 2>&1 | head -40
+bun run build 2>&1 | head -40
 ```
 Expected: BrowsePage errors resolved. MyGroupsPage may still error.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add miniapp/src/pages/BrowsePage.tsx
+git add src/pages/BrowsePage.tsx
 git commit -m "feat: update BrowsePage with header, inline join, and empty state"
 ```
 
@@ -582,12 +582,12 @@ git commit -m "feat: update BrowsePage with header, inline join, and empty state
 ## Task 7: Redesign GroupDetailSheet
 
 **Files:**
-- Modify: `miniapp/src/components/GroupDetailSheet.tsx`
+- Modify: `src/components/GroupDetailSheet.tsx`
 
 - [ ] **Step 1: Replace the full file content**
 
 ```typescript
-// miniapp/src/components/GroupDetailSheet.tsx
+// src/components/GroupDetailSheet.tsx
 import { useState } from 'react';
 import { Modal, Spinner } from '@telegram-apps/telegram-ui';
 import type { FoodGroupDetail } from '../types.ts';
@@ -758,14 +758,14 @@ export function GroupDetailSheet({ group, currentUserId, onClose, onMutated }: G
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd miniapp && bun run build 2>&1 | head -40
+bun run build 2>&1 | head -40
 ```
 Expected: no new errors.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add miniapp/src/components/GroupDetailSheet.tsx
+git add src/components/GroupDetailSheet.tsx
 git commit -m "feat: redesign GroupDetailSheet with theme tokens and cleaner layout"
 ```
 
@@ -774,14 +774,14 @@ git commit -m "feat: redesign GroupDetailSheet with theme tokens and cleaner lay
 ## Task 8: Redesign CreateGroupStepper (4 steps, custom chips)
 
 **Files:**
-- Modify: `miniapp/src/components/CreateGroupStepper.tsx`
+- Modify: `src/components/CreateGroupStepper.tsx`
 
 Steps: Title → Link → Spots (2/4/8/16/32/No Limit/Custom) → Expiry (30m/1h/2h/4h/Custom). No confirm step — Create button is on step 4.
 
 - [ ] **Step 1: Replace the full file content**
 
 ```typescript
-// miniapp/src/components/CreateGroupStepper.tsx
+// src/components/CreateGroupStepper.tsx
 import { useState } from 'react';
 import { Spinner } from '@telegram-apps/telegram-ui';
 import { createGroup } from '../lib/api.ts';
@@ -1143,14 +1143,14 @@ export function CreateGroupStepper({ onCreated }: CreateGroupStepperProps) {
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd miniapp && bun run build 2>&1 | head -40
+bun run build 2>&1 | head -40
 ```
 Expected: no new errors.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add miniapp/src/components/CreateGroupStepper.tsx
+git add src/components/CreateGroupStepper.tsx
 git commit -m "feat: redesign CreateGroupStepper — 4 steps, custom spots/expiry, theme tokens"
 ```
 
@@ -1159,12 +1159,12 @@ git commit -m "feat: redesign CreateGroupStepper — 4 steps, custom spots/expir
 ## Task 9: Update MyGroupsPage
 
 **Files:**
-- Modify: `miniapp/src/pages/MyGroupsPage.tsx`
+- Modify: `src/pages/MyGroupsPage.tsx`
 
 - [ ] **Step 1: Replace the full file content**
 
 ```typescript
-// miniapp/src/pages/MyGroupsPage.tsx
+// src/pages/MyGroupsPage.tsx
 import { useState } from 'react';
 import useSWR from 'swr';
 import { Spinner } from '@telegram-apps/telegram-ui';
@@ -1304,14 +1304,14 @@ export function MyGroupsPage() {
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd miniapp && bun run build 2>&1 | head -40
+bun run build 2>&1 | head -40
 ```
 Expected: no errors.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add miniapp/src/pages/MyGroupsPage.tsx
+git add src/pages/MyGroupsPage.tsx
 git commit -m "feat: update MyGroupsPage with LEADING/JOINED sections and inline actions"
 ```
 
@@ -1320,13 +1320,13 @@ git commit -m "feat: update MyGroupsPage with LEADING/JOINED sections and inline
 ## Task 10: Settings Copy Tweaks
 
 **Files:**
-- Modify: `miniapp/src/pages/SettingsPage.tsx`
+- Modify: `src/pages/SettingsPage.tsx`
 
 Minimal changes — copy only.
 
 - [ ] **Step 1: Update notification description and feedback label**
 
-In `miniapp/src/pages/SettingsPage.tsx`, make these two changes:
+In `src/pages/SettingsPage.tsx`, make these two changes:
 
 Change:
 ```typescript
@@ -1349,13 +1349,13 @@ to:
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd miniapp && bun run build 2>&1 | head -20
+bun run build 2>&1 | head -20
 ```
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add miniapp/src/pages/SettingsPage.tsx
+git add src/pages/SettingsPage.tsx
 git commit -m "chore: update Settings copy — concise labels"
 ```
 
@@ -1364,13 +1364,13 @@ git commit -m "chore: update Settings copy — concise labels"
 ## Task 11: Tab Bar Active Color
 
 **Files:**
-- Modify: `miniapp/src/components/App.tsx`
+- Modify: `src/components/App.tsx`
 
 The active tab should use `#22c55e` instead of whatever Telegram's default tint is.
 
 - [ ] **Step 1: Add active color style to Tabbar.Item**
 
-In `miniapp/src/components/App.tsx`, change:
+In `src/components/App.tsx`, change:
 ```typescript
         <Tabbar.Item
           key={route.path}
@@ -1397,13 +1397,13 @@ to:
 - [ ] **Step 2: Verify build**
 
 ```bash
-cd miniapp && bun run build 2>&1 | head -20
+bun run build 2>&1 | head -20
 ```
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add miniapp/src/components/App.tsx
+git add src/components/App.tsx
 git commit -m "feat: set active tab color to green accent"
 ```
 
@@ -1412,11 +1412,11 @@ git commit -m "feat: set active tab color to green accent"
 ## Task 12: Page Background Color
 
 **Files:**
-- Modify: `miniapp/src/index.css`
+- Modify: `src/index.css`
 
 - [ ] **Step 1: Update body background**
 
-Replace the entire content of `miniapp/src/index.css` with:
+Replace the entire content of `src/index.css` with:
 
 ```css
 body {
@@ -1429,14 +1429,14 @@ body {
 - [ ] **Step 2: Full build verify**
 
 ```bash
-cd miniapp && bun run build 2>&1
+bun run build 2>&1
 ```
 Expected: clean build, zero TypeScript errors, zero warnings.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add miniapp/src/index.css
+git add src/index.css
 git commit -m "chore: set page background to light green-tinted white"
 ```
 
@@ -1444,48 +1444,4 @@ git commit -m "chore: set page background to light green-tinted white"
 
 ## Task 13: End-to-End Verification
 
-- [ ] **Step 1: Start dev server**
-
-```bash
-cd miniapp && bun run dev
-```
-Expected: server starts on `http://localhost:5173` (or similar) with no console errors.
-
-- [ ] **Step 2: Check Browse tab**
-  - Cards render with icon box, title, meta, status badge
-  - Open groups show Details + Join buttons
-  - Full groups show no buttons and are at 55% opacity
-  - Header shows "Browse" + group count subtitle
-
-- [ ] **Step 3: Test inline Join**
-  - Tap Join on an open group
-  - Confirm 1-tap join — no sheet required
-  - Group count should update after SWR refresh
-
-- [ ] **Step 4: Test Details sheet**
-  - Tap Details on a card
-  - Sheet slides up with title, meta, member list, action button
-  - Order link shows as "Open GrabFood link →" (outline button)
-
-- [ ] **Step 5: Test Create stepper**
-  - Navigate to Create tab
-  - Step 1: enter title, Next
-  - Step 2: enter/skip link, Next
-  - Step 3: select chips (2/4/8/16/32), try No Limit, try Custom → enter a number
-  - Step 4: select expiry chip, try Custom → pick a time ≥15 min from now
-  - Step 4 button reads "Create Group ✓"
-  - Submit → success
-
-- [ ] **Step 6: Check My Groups tab**
-  - LEADING section shows groups you created
-  - JOINED section shows groups you joined
-  - Empty section shows "You're not leading any groups" / "You haven't joined any groups"
-  - Cancel Group button (red outline) on leading cards
-  - Leave button (grey outline) on joined cards
-
-- [ ] **Step 7: Final build**
-
-```bash
-cd miniapp && bun run build
-```
-Expected: zero TypeScript errors, successful Vite build output.
+**Skipped by decision — not performed.** Local `initData` auth can't be reliably exercised without a real Telegram client or a signed-token workaround (see conversation history), so manual/automated verification was dropped. Tasks 1–12 are already implemented and committed (see git log); this task is closed without execution.
