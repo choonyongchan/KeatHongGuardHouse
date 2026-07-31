@@ -40,6 +40,7 @@ export class ApiError extends Error {
  * @param data - Payload to serialize as JSON.
  */
 export function ok(res: VercelResponse, data: unknown): void {
+  res.setHeader('Cache-Control', 'no-store');
   res.status(200).json(data);
 }
 
@@ -51,6 +52,7 @@ export function ok(res: VercelResponse, data: unknown): void {
  * @param message - Error message string.
  */
 export function fail(res: VercelResponse, status: number, message: string): void {
+  res.setHeader('Cache-Control', 'no-store');
   res.status(status).json({ error: message });
 }
 
