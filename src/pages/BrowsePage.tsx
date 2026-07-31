@@ -9,6 +9,7 @@ import type { FoodGroup, FoodGroupDetail } from '../types.ts';
 import { GroupCard } from '../components/GroupCard.tsx';
 import { GroupDetailSheet } from '../components/GroupDetailSheet.tsx';
 import { JoinByCodeInput } from '../components/JoinByCodeInput.tsx';
+import { useToast } from '../components/ToastProvider.tsx';
 import { theme } from '../lib/theme.ts';
 
 function LoadingState() {
@@ -26,35 +27,31 @@ export function BrowsePage() {
 
   const [selected, setSelected] = useState<FoodGroupDetail | null>(null);
   const [joiningId, setJoiningId] = useState<number | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
   const userId = useSignal(initData.user)?.id ?? 0;
   const navigate = useNavigate();
+  const { showError } = useToast();
 
   async function handleDetails(group: FoodGroup) {
     hapticFeedback.impactOccurred('light');
-    setActionError(null);
     try {
       const detail = await getGroup(group.code);
       setSelected(detail);
     } catch (e) {
       hapticFeedback.notificationOccurred('error');
-      console.error('Failed to load group details:', e);
-      setActionError(e instanceof Error ? e.message : 'Failed to load group details');
+      showError(e instanceof Error ? e.message : 'Failed to load group details');
     }
   }
 
   async function handleJoin(group: FoodGroup) {
     hapticFeedback.impactOccurred('medium');
     setJoiningId(group.id);
-    setActionError(null);
     try {
       await joinGroup(group.code);
       hapticFeedback.notificationOccurred('success');
       void mutate();
     } catch (e) {
       hapticFeedback.notificationOccurred('error');
-      console.error('Failed to join group:', e);
-      setActionError(e instanceof Error ? e.message : 'Failed to join group');
+      showError(e instanceof Error ? e.message : 'Failed to join group');
     } finally {
       setJoiningId(null);
     }
@@ -86,10 +83,6 @@ export function BrowsePage() {
 
       {/* Content */}
       <div style={{ padding: '0 16px' }}>
-        {actionError && (
-          <p style={{ color: theme.error, fontSize: 13, marginBottom: 12 }}>{actionError}</p>
-        )}
-
         {!groups && !error && <LoadingState />}
 
         {error && (

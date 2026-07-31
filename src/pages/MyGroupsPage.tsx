@@ -7,6 +7,7 @@ import { getMe, getGroup, cancelGroup, leaveGroup } from '../lib/api.ts';
 import type { FoodGroup, FoodGroupDetail, UserProfile } from '../types.ts';
 import { GroupCard } from '../components/GroupCard.tsx';
 import { GroupDetailSheet } from '../components/GroupDetailSheet.tsx';
+import { useToast } from '../components/ToastProvider.tsx';
 import { theme } from '../lib/theme.ts';
 
 function SectionLabel({ label }: { label: string }) {
@@ -32,34 +33,30 @@ export function MyGroupsPage() {
   });
   const [selected, setSelected] = useState<FoodGroupDetail | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
   const userId = useSignal(initData.user)?.id ?? 0;
+  const { showError } = useToast();
 
   async function handleDetails(group: FoodGroup) {
     hapticFeedback.impactOccurred('light');
-    setActionError(null);
     try {
       const detail = await getGroup(group.code);
       setSelected(detail);
     } catch (e) {
       hapticFeedback.notificationOccurred('error');
-      console.error('Failed to load group details:', e);
-      setActionError(e instanceof Error ? e.message : 'Failed to load group details');
+      showError(e instanceof Error ? e.message : 'Failed to load group details');
     }
   }
 
   async function handleCancel(group: FoodGroup) {
     hapticFeedback.impactOccurred('medium');
     setActionLoadingId(group.id);
-    setActionError(null);
     try {
       await cancelGroup(group.code);
       hapticFeedback.notificationOccurred('success');
       void mutate();
     } catch (e) {
       hapticFeedback.notificationOccurred('error');
-      console.error('Failed to cancel group:', e);
-      setActionError(e instanceof Error ? e.message : 'Failed to cancel group');
+      showError(e instanceof Error ? e.message : 'Failed to cancel group');
     } finally {
       setActionLoadingId(null);
     }
@@ -68,15 +65,13 @@ export function MyGroupsPage() {
   async function handleLeave(group: FoodGroup) {
     hapticFeedback.impactOccurred('medium');
     setActionLoadingId(group.id);
-    setActionError(null);
     try {
       await leaveGroup(group.code);
       hapticFeedback.notificationOccurred('success');
       void mutate();
     } catch (e) {
       hapticFeedback.notificationOccurred('error');
-      console.error('Failed to leave group:', e);
-      setActionError(e instanceof Error ? e.message : 'Failed to leave group');
+      showError(e instanceof Error ? e.message : 'Failed to leave group');
     } finally {
       setActionLoadingId(null);
     }
@@ -98,10 +93,6 @@ export function MyGroupsPage() {
       </div>
 
       <div style={{ padding: '0 16px' }}>
-        {actionError && (
-          <p style={{ color: theme.error, fontSize: 13, marginBottom: 12 }}>{actionError}</p>
-        )}
-
         {/* LEADING */}
         <SectionLabel label="LEADING" />
         {data?.createdGroups.length === 0 && (

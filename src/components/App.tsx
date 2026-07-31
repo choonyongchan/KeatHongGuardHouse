@@ -7,6 +7,7 @@ import { useLaunchParams, hapticFeedback } from '@tma.js/sdk-react';
 import { AppRoot, Tabbar } from '@telegram-apps/telegram-ui';
 
 import { routes } from '@/navigation/routes.tsx';
+import { ToastProvider } from './ToastProvider.tsx';
 
 /**
  * Bottom tab bar that highlights the active route and navigates on tap.
@@ -62,15 +63,17 @@ export function App() {
       appearance="light"
       platform={['macos', 'ios'].includes(lp.tgWebAppPlatform) ? 'ios' : 'base'}
     >
-      <HashRouter>
-        <Routes>
-          {routes.map(({ path, Component }) => (
-            <Route key={path} path={path} element={<Component />} />
-          ))}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-        <AppTabbar />
-      </HashRouter>
+      <ToastProvider>
+        <HashRouter>
+          <Routes>
+            {routes.map(({ path, Component }) => (
+              <Route key={path} path={path} element={<Component />} />
+            ))}
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+          <AppTabbar />
+        </HashRouter>
+      </ToastProvider>
     </AppRoot>
   );
 }
