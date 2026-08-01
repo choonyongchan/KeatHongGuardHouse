@@ -8,7 +8,6 @@ import {
   Cell,
   Section,
   Switch,
-  Modal,
   Input,
   Button,
   Spinner,
@@ -50,12 +49,12 @@ function SubscriptionCell({
 }
 
 /**
- * Feedback modal with a textarea-style input and submit button.
+ * Inline feedback form with a textarea-style input and submit button.
  *
- * @param props.onClose - Called when the modal should close.
- * @returns A Telegram UI Modal for submitting feedback.
+ * @param props.onClose - Called when the form should collapse.
+ * @returns An inline panel for submitting feedback.
  */
-function FeedbackModal({ onClose }: { onClose: () => void }) {
+function FeedbackPanel({ onClose }: { onClose: () => void }) {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -80,45 +79,40 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Modal
-      open
-      onOpenChange={(open) => { if (!open) onClose(); }}
-      header={<Modal.Header after={<Modal.Close />}>Send Feedback</Modal.Header>}
-    >
-      <div style={{ padding: '0 16px 24px' }}>
-        {done ? (
-          <>
-            <p style={{ color: 'var(--tg-theme-text-color)', textAlign: 'center', margin: '24px 0' }}>
-              ✅ Thanks for your feedback!
-            </p>
-            <Button mode="filled" size="l" stretched onClick={onClose}>Close</Button>
-          </>
-        ) : (
-          <>
-            <Input
-              placeholder="Tell us what you think… (max 1000 chars)"
-              value={message}
-              onChange={(e) => { setMessage(e.target.value); setError(null); }}
-              status={error ? 'error' : undefined}
-              header={error ?? undefined}
-              maxLength={1000}
-              multiple
-            />
-            <div style={{ marginTop: 12 }}>
-              <Button
-                mode="filled"
-                size="l"
-                stretched
-                onClick={() => void handleSubmit()}
-                disabled={loading || !message.trim()}
-              >
-                {loading ? <Spinner size="s" /> : 'Submit'}
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
-    </Modal>
+    <div style={{ padding: '12px 16px 24px' }}>
+      {done ? (
+        <>
+          <p style={{ color: 'var(--tg-theme-text-color)', textAlign: 'center', margin: '24px 0' }}>
+            ✅ Thanks for your feedback!
+          </p>
+          <Button mode="filled" size="l" stretched onClick={onClose}>Close</Button>
+        </>
+      ) : (
+        <>
+          <Input
+            placeholder="Tell us what you think… (max 1000 chars)"
+            value={message}
+            onChange={(e) => { setMessage(e.target.value); setError(null); }}
+            status={error ? 'error' : undefined}
+            header={error ?? undefined}
+            maxLength={1000}
+            multiple
+          />
+          <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+            <Button mode="outline" size="l" onClick={onClose}>Cancel</Button>
+            <Button
+              mode="filled"
+              size="l"
+              stretched
+              onClick={() => void handleSubmit()}
+              disabled={loading || !message.trim()}
+            >
+              {loading ? <Spinner size="s" /> : 'Submit'}
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -165,11 +159,12 @@ export function SettingsPage() {
 
       <Section header="Support">
         <Cell
-          onClick={() => setShowFeedback(true)}
+          onClick={() => setShowFeedback((v) => !v)}
           style={{ cursor: 'pointer' }}
         >
           Send Feedback
         </Cell>
+        {showFeedback && <FeedbackPanel onClose={() => setShowFeedback(false)} />}
       </Section>
 
       <Section header="About">
@@ -177,8 +172,6 @@ export function SettingsPage() {
           KeatHong GuardHouse v0.1.0
         </Cell>
       </Section>
-
-      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
     </div>
   );
 }

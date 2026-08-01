@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import useSWR from 'swr';
-import { Modal, Spinner } from '@telegram-apps/telegram-ui';
+import { Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback, useSignal, initData } from '@tma.js/sdk-react';
 
 import { getMe, getGroup, cancelGroup, leaveGroup } from '../lib/api.ts';
@@ -120,6 +120,40 @@ export function MyGroupsPage() {
                 onMutated={() => void mutate()}
               />
             )}
+            {confirmTarget?.code === g.code && (
+              <div style={{
+                background: theme.cardBg, borderRadius: 14, marginBottom: 8,
+                padding: '10px 12px 14px', boxShadow: theme.shadow,
+              }}>
+                <p style={{ fontSize: 13, color: theme.textPrimary, marginBottom: 12 }}>
+                  Cancel "{confirmTarget.title}"? This can't be undone.
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setConfirmTarget(null)}
+                    style={{
+                      flex: 1, padding: '10px 0', borderRadius: 10,
+                      background: 'transparent', color: theme.textSecondary,
+                      border: `1.5px solid ${theme.border}`,
+                      fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    No
+                  </button>
+                  <button
+                    onClick={() => { void handleCancel(confirmTarget); setConfirmTarget(null); }}
+                    style={{
+                      flex: 1, padding: '10px 0', borderRadius: 10,
+                      background: 'transparent', color: theme.error,
+                      border: `1.5px solid ${theme.error}`,
+                      fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    Yes
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
 
@@ -148,44 +182,6 @@ export function MyGroupsPage() {
           </div>
         ))}
       </div>
-
-      {confirmTarget && (
-        <Modal
-          open
-          onOpenChange={(open) => { if (!open) setConfirmTarget(null); }}
-          header={<Modal.Header after={<Modal.Close />}>Confirm Delete</Modal.Header>}
-        >
-          <div style={{ padding: '0 16px 32px' }}>
-            <p style={{ fontSize: 13, color: theme.textPrimary, marginBottom: 20 }}>
-              Cancel "{confirmTarget.title}"? This can't be undone.
-            </p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => setConfirmTarget(null)}
-                style={{
-                  flex: 1, padding: '10px 0', borderRadius: 10,
-                  background: 'transparent', color: theme.textSecondary,
-                  border: `1.5px solid ${theme.border}`,
-                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                No
-              </button>
-              <button
-                onClick={() => { void handleCancel(confirmTarget); setConfirmTarget(null); }}
-                style={{
-                  flex: 1, padding: '10px 0', borderRadius: 10,
-                  background: 'transparent', color: theme.error,
-                  border: `1.5px solid ${theme.error}`,
-                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                Yes
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }
