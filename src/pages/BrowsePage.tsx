@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { getGroups, getGroup, joinGroup } from '../lib/api.ts';
 import type { FoodGroup, FoodGroupDetail } from '../types.ts';
 import { GroupCard } from '../components/GroupCard.tsx';
-import { GroupDetailSheet } from '../components/GroupDetailSheet.tsx';
+import { GroupDetailPanel } from '../components/GroupDetailPanel.tsx';
 import { JoinByCodeInput } from '../components/JoinByCodeInput.tsx';
 import { useToast } from '../components/ToastProvider.tsx';
 import { theme } from '../lib/theme.ts';
@@ -33,6 +33,10 @@ export function BrowsePage() {
 
   async function handleDetails(group: FoodGroup) {
     hapticFeedback.impactOccurred('light');
+    if (selected?.code === group.code) {
+      setSelected(null);
+      return;
+    }
     try {
       const detail = await getGroup(group.code);
       setSelected(detail);
@@ -63,6 +67,7 @@ export function BrowsePage() {
   }
 
   const openCount = groups?.filter((g) => g.status === 'open').length ?? 0;
+  const selectedInList = selected ? groups?.some((g) => g.code === selected.code) ?? false : false;
 
   return (
     <div style={{ paddingBottom: 80, paddingTop: 16 }}>
@@ -79,6 +84,16 @@ export function BrowsePage() {
       {/* Join by code */}
       <div style={{ marginBottom: 12 }}>
         <JoinByCodeInput onGroupFound={handleGroupFound} />
+        {selected && !selectedInList && (
+          <div style={{ padding: '0 16px' }}>
+            <GroupDetailPanel
+              group={selected}
+              currentUserId={userId}
+              onClose={() => setSelected(null)}
+              onMutated={() => void mutate()}
+            />
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -111,25 +126,25 @@ export function BrowsePage() {
         )}
 
         {groups && groups.map((g) => (
-          <GroupCard
-            key={g.id}
-            group={g}
-            actions={g.status === 'open' ? [
-              { label: 'Details', style: 'outline', onClick: () => void handleDetails(g) },
-              { label: 'Join', style: 'primary', onClick: () => void handleJoin(g), loading: joiningId === g.id },
-            ] : undefined}
-          />
+          <div key={g.id}>
+            <GroupCard
+              group={g}
+              actions={g.status === 'open' ? [
+                { label: 'Details', style: 'outline', onClick: () => void handleDetails(g) },
+                { label: 'Join', style: 'primary', onClick: () => void handleJoin(g), loading: joiningId === g.id },
+              ] : undefined}
+            />
+            {selected?.code === g.code && (
+              <GroupDetailPanel
+                group={selected}
+                currentUserId={userId}
+                onClose={() => setSelected(null)}
+                onMutated={() => void mutate()}
+              />
+            )}
+          </div>
         ))}
       </div>
-
-      {selected && (
-        <GroupDetailSheet
-          group={selected}
-          currentUserId={userId}
-          onClose={() => setSelected(null)}
-          onMutated={() => void mutate()}
-        />
-      )}
     </div>
   );
 }

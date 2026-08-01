@@ -6,7 +6,7 @@ import { hapticFeedback, useSignal, initData } from '@tma.js/sdk-react';
 import { getMe, getGroup, cancelGroup, leaveGroup } from '../lib/api.ts';
 import type { FoodGroup, FoodGroupDetail, UserProfile } from '../types.ts';
 import { GroupCard } from '../components/GroupCard.tsx';
-import { GroupDetailSheet } from '../components/GroupDetailSheet.tsx';
+import { GroupDetailPanel } from '../components/GroupDetailPanel.tsx';
 import { useToast } from '../components/ToastProvider.tsx';
 import { theme } from '../lib/theme.ts';
 
@@ -39,6 +39,10 @@ export function MyGroupsPage() {
 
   async function handleDetails(group: FoodGroup) {
     hapticFeedback.impactOccurred('light');
+    if (selected?.code === group.code) {
+      setSelected(null);
+      return;
+    }
     try {
       const detail = await getGroup(group.code);
       setSelected(detail);
@@ -100,14 +104,23 @@ export function MyGroupsPage() {
           <EmptySectionNote message="You're not leading any groups" />
         )}
         {data?.createdGroups.map((g) => (
-          <GroupCard
-            key={g.id}
-            group={g}
-            actions={[
-              { label: 'Details', style: 'outline', onClick: () => void handleDetails(g) },
-              { label: 'Cancel Group', style: 'danger', onClick: () => setConfirmTarget(g), loading: actionLoadingId === g.id },
-            ]}
-          />
+          <div key={g.id}>
+            <GroupCard
+              group={g}
+              actions={[
+                { label: 'Details', style: 'outline', onClick: () => void handleDetails(g) },
+                { label: 'Cancel Group', style: 'danger', onClick: () => setConfirmTarget(g), loading: actionLoadingId === g.id },
+              ]}
+            />
+            {selected?.code === g.code && (
+              <GroupDetailPanel
+                group={selected}
+                currentUserId={userId}
+                onClose={() => setSelected(null)}
+                onMutated={() => void mutate()}
+              />
+            )}
+          </div>
         ))}
 
         {/* JOINED */}
@@ -116,25 +129,25 @@ export function MyGroupsPage() {
           <EmptySectionNote message="You haven't joined any groups" />
         )}
         {data?.joinedGroups.map((g) => (
-          <GroupCard
-            key={g.id}
-            group={g}
-            actions={[
-              { label: 'Details', style: 'outline', onClick: () => void handleDetails(g) },
-              { label: 'Leave', style: 'outline', onClick: () => void handleLeave(g), loading: actionLoadingId === g.id },
-            ]}
-          />
+          <div key={g.id}>
+            <GroupCard
+              group={g}
+              actions={[
+                { label: 'Details', style: 'outline', onClick: () => void handleDetails(g) },
+                { label: 'Leave', style: 'outline', onClick: () => void handleLeave(g), loading: actionLoadingId === g.id },
+              ]}
+            />
+            {selected?.code === g.code && (
+              <GroupDetailPanel
+                group={selected}
+                currentUserId={userId}
+                onClose={() => setSelected(null)}
+                onMutated={() => void mutate()}
+              />
+            )}
+          </div>
         ))}
       </div>
-
-      {selected && (
-        <GroupDetailSheet
-          group={selected}
-          currentUserId={userId}
-          onClose={() => setSelected(null)}
-          onMutated={() => void mutate()}
-        />
-      )}
 
       {confirmTarget && (
         <Modal

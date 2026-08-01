@@ -9,11 +9,11 @@ import { Placeholder } from '@telegram-apps/telegram-ui';
 import { getGroup } from '../lib/api.ts';
 import type { FoodGroup, FoodGroupDetail } from '../types.ts';
 import { CreateGroupStepper } from '../components/CreateGroupStepper.tsx';
-import { GroupDetailSheet } from '../components/GroupDetailSheet.tsx';
+import { GroupDetailPanel } from '../components/GroupDetailPanel.tsx';
 
 /**
- * Create tab — renders the CreateGroupStepper and opens the new group's detail
- * sheet immediately after a successful creation.
+ * Create tab — renders the CreateGroupStepper and shows the new group's detail
+ * panel immediately after a successful creation.
  *
  * @returns The create page JSX element.
  */
@@ -51,12 +51,14 @@ export function CreatePage() {
       )}
 
       {createdGroup && (
-        <GroupDetailSheet
-          group={createdGroup}
-          currentUserId={userId}
-          onClose={() => setCreatedGroup(null)}
-          onMutated={() => {}}
-        />
+        <div style={{ padding: '0 16px' }}>
+          <GroupDetailPanel
+            group={createdGroup}
+            currentUserId={userId}
+            onClose={() => setCreatedGroup(null)}
+            onMutated={() => {}}
+          />
+        </div>
       )}
     </div>
   );
