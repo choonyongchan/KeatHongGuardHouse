@@ -107,12 +107,12 @@ export function MyGroupsPage() {
           <div key={g.id}>
             <GroupCard
               group={g}
-              actions={[
+              actions={confirmTarget?.code === g.code ? undefined : [
                 { label: 'Details', style: 'outline', onClick: () => void handleDetails(g) },
                 { label: 'Cancel Group', style: 'danger', onClick: () => setConfirmTarget(g), loading: actionLoadingId === g.id },
               ]}
             />
-            {selected?.code === g.code && (
+            {selected?.code === g.code && confirmTarget?.code !== g.code && (
               <GroupDetailPanel
                 group={selected}
                 currentUserId={userId}
@@ -149,7 +149,7 @@ export function MyGroupsPage() {
                       fontSize: 13, fontWeight: 700, cursor: 'pointer',
                     }}
                   >
-                    Yes
+                    Confirm Cancel
                   </button>
                 </div>
               </div>

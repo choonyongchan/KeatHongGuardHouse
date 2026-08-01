@@ -15,6 +15,7 @@ import { retrieveLaunchParams } from '@tma.js/sdk-react';
 import { Root } from '@/components/Root.tsx';
 import { EnvUnsupported } from '@/components/EnvUnsupported.tsx';
 import { init } from '@/init.ts';
+import { setPendingInviteCode } from '@/lib/pendingInvite.ts';
 
 import './index.css';
 
@@ -26,8 +27,14 @@ const root = ReactDOM.createRoot(document.getElementById('root')!);
 try {
   const launchParams = retrieveLaunchParams();
   const { tgWebAppPlatform: platform } = launchParams;
-  const debug = (launchParams.tgWebAppStartParam || '').includes('debug')
-    || import.meta.env.DEV;
+  const startParam = launchParams.tgWebAppStartParam || '';
+  const debug = startParam.includes('debug') || import.meta.env.DEV;
+
+  // A start param that looks like a group invite code (letters only, not the
+  // debug sentinel) is stashed for BrowsePage to look up once mounted.
+  if (startParam && /^[A-Za-z]+$/.test(startParam)) {
+    setPendingInviteCode(startParam.toUpperCase());
+  }
 
   // Configure all application dependencies.
   init({

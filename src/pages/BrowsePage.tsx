@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback, useSignal, initData } from '@tma.js/sdk-react';
@@ -11,6 +11,7 @@ import { GroupDetailPanel } from '../components/GroupDetailPanel.tsx';
 import { JoinByCodeInput } from '../components/JoinByCodeInput.tsx';
 import { useToast } from '../components/ToastProvider.tsx';
 import { theme } from '../lib/theme.ts';
+import { consumePendingInviteCode } from '../lib/pendingInvite.ts';
 
 function LoadingState() {
   return (
@@ -65,6 +66,20 @@ export function BrowsePage() {
     hapticFeedback.impactOccurred('light');
     setSelected(group);
   }
+
+  // Deep-link entry: a group code passed via ?startapp= on launch is looked
+  // up and shown for confirmation, same as a manual code lookup.
+  useEffect(() => {
+    const code = consumePendingInviteCode();
+    if (!code) return;
+    getGroup(code)
+      .then(handleGroupFound)
+      .catch((e: unknown) => {
+        hapticFeedback.notificationOccurred('error');
+        showError(e instanceof Error ? e.message : 'Failed to load invited group');
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openCount = groups?.filter((g) => g.status === 'open').length ?? 0;
   const selectedInList = selected ? groups?.some((g) => g.code === selected.code) ?? false : false;
