@@ -4,7 +4,7 @@
  */
 
 import { initData } from '@tma.js/sdk-react';
-import type { FoodGroup, FoodGroupDetail, UserProfile } from '../types.ts';
+import type { FoodGroup, FoodGroupDetail, GroupVisibility, UserProfile } from '../types.ts';
 
 /** Base path — empty string so requests go to the same Vercel origin. */
 const BASE = '';
@@ -84,6 +84,7 @@ export function createGroup(payload: {
   externalLink: string;
   maxMembers: number | null;
   expiryMinutes: number;
+  visibility: GroupVisibility;
 }): Promise<FoodGroup> {
   return apiFetch<FoodGroup>('/api/groups', {
     method: 'POST',

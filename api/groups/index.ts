@@ -25,7 +25,7 @@ async function listOpenGroups() {
       u.username   AS creator_username
     FROM food_groups fg
     JOIN users u ON u.telegram_id = fg.creator_id
-    WHERE fg.status IN ('open', 'full')
+    WHERE fg.status IN ('open', 'full') AND fg.visibility = 'public'
     ORDER BY fg.expires_at ASC
   `;
   return rows;
@@ -61,7 +61,12 @@ function parseCreateBody(body: Record<string, unknown>) {
     throw new ApiError(400, 'expiryMinutes must be an integer between 15 and 480');
   }
 
-  return { title, externalLink, maxMembers, expiryMinutes };
+  const visibility = body.visibility === undefined ? 'public' : String(body.visibility);
+  if (visibility !== 'public' && visibility !== 'private') {
+    throw new ApiError(400, "visibility must be 'public' or 'private'");
+  }
+
+  return { title, externalLink, maxMembers, expiryMinutes, visibility };
 }
 
 /**
@@ -74,6 +79,7 @@ function parseCreateBody(body: Record<string, unknown>) {
  * @param maxMembers - Maximum number of members allowed.
  * @param expiryMinutes - Minutes from now until the group expires.
  * @param code - Pre-generated unique group code.
+ * @param visibility - 'public' (listed in Browse) or 'private' (code/link only).
  * @returns The newly created group row.
  */
 async function insertGroup(
@@ -83,17 +89,19 @@ async function insertGroup(
   maxMembers: number | null,
   expiryMinutes: number,
   code: string,
+  visibility: string,
 ) {
   const { rows } = await sql`
     WITH new_group AS (
-      INSERT INTO food_groups (code, creator_id, title, external_link, max_members, expires_at)
+      INSERT INTO food_groups (code, creator_id, title, external_link, max_members, expires_at, visibility)
       VALUES (
         ${code},
         ${creatorId},
         ${title},
         ${externalLink},
         ${maxMembers},
-        NOW() + (${expiryMinutes} || ' minutes')::INTERVAL
+        NOW() + (${expiryMinutes} || ' minutes')::INTERVAL,
+        ${visibility}
       )
       RETURNING *
     ),
@@ -128,6 +136,7 @@ const handlePost: AuthedHandler = async (req, res, user) => {
     body.maxMembers,
     body.expiryMinutes,
     code,
+    body.visibility,
   );
 
   ok(res, group);

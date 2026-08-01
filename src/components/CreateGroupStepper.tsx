@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import { Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback } from '@tma.js/sdk-react';
 import { createGroup } from '../lib/api.ts';
-import type { FoodGroup } from '../types.ts';
+import type { FoodGroup, GroupVisibility } from '../types.ts';
 import { copyInviteCode, shareInvite } from '../lib/share.ts';
 import { theme } from '../lib/theme.ts';
 
@@ -14,6 +14,7 @@ interface GroupDraft {
   customMembers: string;        // raw input when Custom selected
   expiryMinutes: number | null; // null = custom time chosen
   customTime: string;           // HH:MM string when Custom selected
+  visibility: GroupVisibility;
 }
 
 const MEMBER_PRESETS = [2, 4, 8, 16, 32] as const;
@@ -141,6 +142,21 @@ function StepMembers({ draft, onChange, error }: StepProps) {
         />
       )}
       {error && <p style={{ color: theme.error, fontSize: 11, marginTop: 4 }}>{error}</p>}
+
+      <p style={{ ...hintStyle, marginTop: 18 }}>Who can find this group?</p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button onClick={() => onChange({ visibility: 'public' })} style={chipStyle(draft.visibility === 'public')}>
+          🌐 Public
+        </button>
+        <button onClick={() => onChange({ visibility: 'private' })} style={chipStyle(draft.visibility === 'private')}>
+          🔒 Private
+        </button>
+      </div>
+      <p style={{ fontSize: 12, color: theme.textSecondary, marginTop: 6 }}>
+        {draft.visibility === 'public'
+          ? 'Anyone can find it in the Browse tab.'
+          : 'Only joinable by code or link — not shown in Browse.'}
+      </p>
     </div>
   );
 }
@@ -226,7 +242,15 @@ function StepInvite({ group, onViewDetails }: StepInviteProps) {
       <p style={hintStyle}>Get the word out to your neighbours</p>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: theme.textSecondary, marginBottom: 12 }}>
-        <span>🔍</span> Friends can find it in the <strong style={{ color: theme.textPrimary }}>&nbsp;Browse&nbsp;</strong> tab
+        {group.visibility === 'public' ? (
+          <>
+            <span>🔍</span> Friends can find it in the <strong style={{ color: theme.textPrimary }}>&nbsp;Browse&nbsp;</strong> tab
+          </>
+        ) : (
+          <>
+            <span>🔒</span> Private — only people with the code or link can join
+          </>
+        )}
       </div>
 
       <div style={{
@@ -357,6 +381,7 @@ export function CreateGroupStepper({ onCreated }: CreateGroupStepperProps) {
     customMembers: '',
     expiryMinutes: 60,
     customTime: '',
+    visibility: 'public',
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -384,6 +409,7 @@ export function CreateGroupStepper({ onCreated }: CreateGroupStepperProps) {
         externalLink: draft.externalLink.trim(),
         maxMembers: draft.maxMembers === -1 ? null : draft.maxMembers,
         expiryMinutes: resolveExpiryMinutes(draft),
+        visibility: draft.visibility,
       });
       hapticFeedback.notificationOccurred('success');
       setCreatedGroup(group);

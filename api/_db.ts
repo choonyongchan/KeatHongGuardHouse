@@ -95,6 +95,10 @@ export async function ensureSchema(): Promise<void> {
   `.catch(() => { /* column may already be nullable or table not yet created */ });
 
   await sql`
+    ALTER TABLE food_groups ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'public'
+  `.catch(() => { /* column may already exist */ });
+
+  await sql`
     CREATE TABLE IF NOT EXISTS feedback (
       id          SERIAL PRIMARY KEY,
       user_id     BIGINT NOT NULL REFERENCES users(telegram_id),

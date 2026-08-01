@@ -6,6 +6,9 @@
 /** Status values a food group can have throughout its lifecycle. */
 export type GroupStatus = 'open' | 'full' | 'expired' | 'cancelled';
 
+/** Whether a group is listed in Browse ('public') or code/link-only ('private'). */
+export type GroupVisibility = 'public' | 'private';
+
 /** A food group as returned by the API. */
 export interface FoodGroup {
   id: number;
@@ -19,6 +22,7 @@ export interface FoodGroup {
   current_count: number;
   expires_at: string;
   status: GroupStatus;
+  visibility: GroupVisibility;
   expiry_warned: boolean;
   created_at: string;
 }
