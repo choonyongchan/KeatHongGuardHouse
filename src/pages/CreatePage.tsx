@@ -3,7 +3,7 @@
  */
 
 import { useState } from 'react';
-import { hapticFeedback, useSignal, initData } from '@tma.js/sdk-react';
+import { useSignal, initData } from '@tma.js/sdk-react';
 import { Placeholder } from '@telegram-apps/telegram-ui';
 
 import { getGroup } from '../lib/api.ts';
@@ -28,7 +28,6 @@ export function CreatePage() {
    * @param group - The freshly created group returned by the API.
    */
   async function handleCreated(group: FoodGroup) {
-    hapticFeedback.notificationOccurred('success');
     try {
       const detail = await getGroup(group.code);
       setCreatedGroup(detail);

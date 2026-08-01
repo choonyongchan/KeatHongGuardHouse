@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Spinner } from '@telegram-apps/telegram-ui';
+import { hapticFeedback } from '@tma.js/sdk-react';
 import { createGroup } from '../lib/api.ts';
 import type { FoodGroup } from '../types.ts';
+import { copyInviteCode, shareInvite } from '../lib/share.ts';
 import { theme } from '../lib/theme.ts';
 
 interface GroupDraft {
@@ -186,6 +188,106 @@ function StepExpiry({ draft, onChange, error }: StepProps) {
   );
 }
 
+interface StepInviteProps {
+  group: FoodGroup;
+  onViewDetails: () => void;
+}
+
+function StepInvite({ group, onViewDetails }: StepInviteProps) {
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+
+  function flashCopyFeedback(message: string) {
+    setCopyFeedback(message);
+    setTimeout(() => setCopyFeedback(null), 2000);
+  }
+
+  async function handleCopyCode() {
+    hapticFeedback.impactOccurred('light');
+    try {
+      await copyInviteCode(group.code);
+      flashCopyFeedback('Code copied!');
+    } catch {
+      flashCopyFeedback('Could not copy');
+    }
+  }
+
+  async function handleShare() {
+    hapticFeedback.impactOccurred('light');
+    try {
+      const result = await shareInvite(group.code, group.title);
+      if (result === 'copied') flashCopyFeedback('Link copied!');
+    } catch {
+      flashCopyFeedback('Could not share');
+    }
+  }
+
+  return (
+    <div>
+      <p style={hintStyle}>Get the word out to your neighbours</p>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: theme.textSecondary, marginBottom: 12 }}>
+        <span>🔍</span> Friends can find it in the <strong style={{ color: theme.textPrimary }}>&nbsp;Browse&nbsp;</strong> tab
+      </div>
+
+      <div style={{
+        background: theme.accentLight,
+        border: `1.5px solid ${theme.accentBorder}`,
+        borderRadius: 12,
+        padding: '14px 16px',
+        textAlign: 'center',
+      }}>
+        <div style={{
+          fontSize: 28, fontWeight: 800, letterSpacing: 3,
+          color: theme.textPrimary, fontFamily: 'monospace',
+          marginBottom: 12, wordBreak: 'break-all',
+        }}>
+          {group.code}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => void handleCopyCode()}
+            style={{
+              flex: 1, padding: '10px 0', borderRadius: 10,
+              background: theme.cardBg, color: theme.textPrimary,
+              border: `1.5px solid ${theme.accentBorder}`,
+              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            📋 Copy code
+          </button>
+          <button
+            onClick={() => void handleShare()}
+            style={{
+              flex: 1, padding: '10px 0', borderRadius: 10,
+              background: theme.accent, color: '#fff',
+              border: 'none',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            ↗ Share link
+          </button>
+        </div>
+        {copyFeedback && (
+          <div style={{ fontSize: 11, fontWeight: 700, color: theme.accent, marginTop: 8 }}>
+            {copyFeedback}
+          </div>
+        )}
+      </div>
+
+      <button
+        onClick={onViewDetails}
+        style={{
+          width: '100%', marginTop: 16, padding: '11px 0', borderRadius: 10,
+          border: 'none', background: theme.accent, color: '#fff',
+          fontSize: 13, fontWeight: 700, cursor: 'pointer',
+        }}
+      >
+        View group details →
+      </button>
+    </div>
+  );
+}
+
 function validateStep(step: number, draft: GroupDraft): string | null {
   if (step === 0) {
     if (!draft.title.trim()) return 'Please enter a name';
@@ -239,6 +341,7 @@ const STEP_HEADINGS = [
   'Paste your order link',
   'How many spots?',
   'When does it close?',
+  'Invite your friends',
 ];
 
 interface CreateGroupStepperProps {
@@ -257,6 +360,7 @@ export function CreateGroupStepper({ onCreated }: CreateGroupStepperProps) {
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [createdGroup, setCreatedGroup] = useState<FoodGroup | null>(null);
 
   function handleChange(patch: Partial<GroupDraft>) {
     setDraft((d) => ({ ...d, ...patch }));
@@ -281,7 +385,9 @@ export function CreateGroupStepper({ onCreated }: CreateGroupStepperProps) {
         maxMembers: draft.maxMembers === -1 ? null : draft.maxMembers,
         expiryMinutes: resolveExpiryMinutes(draft),
       });
-      onCreated(group);
+      hapticFeedback.notificationOccurred('success');
+      setCreatedGroup(group);
+      setStep(4);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create group');
     } finally {
@@ -290,11 +396,12 @@ export function CreateGroupStepper({ onCreated }: CreateGroupStepperProps) {
   }
 
   const stepProps: StepProps = { draft, onChange: handleChange, error };
-  const isLast = step === 3;
+  const isSubmitStep = step === 3;
+  const isInviteStep = step === 4;
 
   return (
     <div style={{ padding: '16px 16px 24px' }}>
-      <ProgressBar step={step} total={4} />
+      <ProgressBar step={step} total={5} />
 
       <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 800, color: theme.textPrimary }}>
         {STEP_HEADINGS[step]}
@@ -304,40 +411,45 @@ export function CreateGroupStepper({ onCreated }: CreateGroupStepperProps) {
       {step === 1 && <StepLink {...stepProps} />}
       {step === 2 && <StepMembers {...stepProps} />}
       {step === 3 && <StepExpiry {...stepProps} />}
+      {isInviteStep && createdGroup && (
+        <StepInvite group={createdGroup} onViewDetails={() => onCreated(createdGroup)} />
+      )}
 
-      {isLast && error && (
+      {isSubmitStep && error && (
         <p style={{ color: theme.error, fontSize: 13, marginTop: 8 }}>{error}</p>
       )}
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
-        {step > 0 && (
+      {!isInviteStep && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
+          {step > 0 && (
+            <button
+              onClick={() => { setStep((s) => s - 1); setError(null); }}
+              style={{
+                flex: 1, padding: '11px 0', borderRadius: 10,
+                border: `1.5px solid ${theme.border}`,
+                background: 'transparent', color: theme.textSecondary,
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              ← Back
+            </button>
+          )}
           <button
-            onClick={() => { setStep((s) => s - 1); setError(null); }}
+            onClick={isSubmitStep ? handleSubmit : handleNext}
+            disabled={loading}
             style={{
-              flex: 1, padding: '11px 0', borderRadius: 10,
-              border: `1.5px solid ${theme.border}`,
-              background: 'transparent', color: theme.textSecondary,
-              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              flex: 2, padding: '11px 0', borderRadius: 10,
+              border: 'none',
+              background: loading ? theme.accentBorder : theme.accent,
+              color: '#fff',
+              fontSize: 13, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
             }}
+            aria-label={isSubmitStep ? 'Create group' : 'Next step'}
           >
-            ← Back
+            {loading ? <Spinner size="s" /> : isSubmitStep ? 'Create Group ✓' : 'Next →'}
           </button>
-        )}
-        <button
-          onClick={isLast ? handleSubmit : handleNext}
-          disabled={loading}
-          style={{
-            flex: 2, padding: '11px 0', borderRadius: 10,
-            border: 'none',
-            background: loading ? theme.accentBorder : theme.accent,
-            color: '#fff',
-            fontSize: 13, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
-          }}
-          aria-label={isLast ? 'Create group' : 'Next step'}
-        >
-          {loading ? <Spinner size="s" /> : isLast ? 'Create Group ✓' : 'Next →'}
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
