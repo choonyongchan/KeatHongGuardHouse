@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import useSWR from 'swr';
-import { Spinner } from '@telegram-apps/telegram-ui';
+import { Modal, Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback, useSignal, initData } from '@tma.js/sdk-react';
 
 import { getMe, getGroup, cancelGroup, leaveGroup } from '../lib/api.ts';
@@ -33,6 +33,7 @@ export function MyGroupsPage() {
   });
   const [selected, setSelected] = useState<FoodGroupDetail | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<FoodGroup | null>(null);
   const userId = useSignal(initData.user)?.id ?? 0;
   const { showError } = useToast();
 
@@ -104,7 +105,7 @@ export function MyGroupsPage() {
             group={g}
             actions={[
               { label: 'Details', style: 'outline', onClick: () => void handleDetails(g) },
-              { label: 'Cancel Group', style: 'danger', onClick: () => void handleCancel(g), loading: actionLoadingId === g.id },
+              { label: 'Cancel Group', style: 'danger', onClick: () => setConfirmTarget(g), loading: actionLoadingId === g.id },
             ]}
           />
         ))}
@@ -133,6 +134,44 @@ export function MyGroupsPage() {
           onClose={() => setSelected(null)}
           onMutated={() => void mutate()}
         />
+      )}
+
+      {confirmTarget && (
+        <Modal
+          open
+          onOpenChange={(open) => { if (!open) setConfirmTarget(null); }}
+          header={<Modal.Header after={<Modal.Close />}>Confirm Delete</Modal.Header>}
+        >
+          <div style={{ padding: '0 16px 32px' }}>
+            <p style={{ fontSize: 13, color: theme.textPrimary, marginBottom: 20 }}>
+              Cancel "{confirmTarget.title}"? This can't be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setConfirmTarget(null)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 10,
+                  background: 'transparent', color: theme.textSecondary,
+                  border: `1.5px solid ${theme.border}`,
+                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                No
+              </button>
+              <button
+                onClick={() => { void handleCancel(confirmTarget); setConfirmTarget(null); }}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 10,
+                  background: 'transparent', color: theme.error,
+                  border: `1.5px solid ${theme.error}`,
+                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

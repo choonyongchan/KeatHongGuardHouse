@@ -4,7 +4,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql, ensureSchema } from '../_db.js';
+import { sql, ensureSchema, expireOverdueGroups } from '../_db.js';
 import { generateUniqueCode } from '../_codegen.js';
 import { withAuth, ok, fail, ApiError, type AuthedHandler } from '../_response.js';
 
@@ -17,6 +17,7 @@ import { withAuth, ok, fail, ApiError, type AuthedHandler } from '../_response.j
  */
 async function listOpenGroups() {
   await ensureSchema();
+  await expireOverdueGroups();
   const { rows } = await sql`
     SELECT
       fg.*,

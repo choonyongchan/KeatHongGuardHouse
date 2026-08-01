@@ -43,6 +43,7 @@ function platformLabel(link: string): string {
 export function GroupDetailSheet({ group, currentUserId, onClose, onMutated }: GroupDetailSheetProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const action = resolveAction(group, currentUserId);
 
   async function handleAction() {
@@ -140,7 +141,7 @@ export function GroupDetailSheet({ group, currentUserId, onClose, onMutated }: G
         {/* Action button */}
         {action && (
           <button
-            onClick={() => void handleAction()}
+            onClick={() => (action === 'cancel' ? setConfirming(true) : void handleAction())}
             disabled={loading}
             aria-label={actionLabel}
             style={{
@@ -160,6 +161,44 @@ export function GroupDetailSheet({ group, currentUserId, onClose, onMutated }: G
           </button>
         )}
       </div>
+
+      {confirming && (
+        <Modal
+          open
+          onOpenChange={(open) => { if (!open) setConfirming(false); }}
+          header={<Modal.Header after={<Modal.Close />}>Confirm Delete</Modal.Header>}
+        >
+          <div style={{ padding: '0 16px 32px' }}>
+            <p style={{ fontSize: 13, color: theme.textPrimary, marginBottom: 20 }}>
+              Cancel "{group.title}"? This can't be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setConfirming(false)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 10,
+                  background: 'transparent', color: theme.textSecondary,
+                  border: `1.5px solid ${theme.border}`,
+                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                No
+              </button>
+              <button
+                onClick={() => { setConfirming(false); void handleAction(); }}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 10,
+                  background: 'transparent', color: theme.error,
+                  border: `1.5px solid ${theme.error}`,
+                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </Modal>
   );
 }

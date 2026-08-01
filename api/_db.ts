@@ -107,6 +107,18 @@ export async function ensureSchema(): Promise<void> {
 }
 
 /**
+ * Flips any `open`/`full` group whose `expires_at` has passed to `expired`.
+ * Called before any group-listing query so `status` reflects real time.
+ */
+export async function expireOverdueGroups(): Promise<void> {
+  await sql`
+    UPDATE food_groups
+    SET status = 'expired'
+    WHERE status IN ('open', 'full') AND expires_at <= NOW()
+  `;
+}
+
+/**
  * Upserts a Telegram user into the `users` table.
  * Updates `username` and `first_name` on conflict to keep them fresh.
  *

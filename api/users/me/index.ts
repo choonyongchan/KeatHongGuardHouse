@@ -3,7 +3,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql, ensureSchema, getSubscribed } from '../../_db.js';
+import { sql, ensureSchema, expireOverdueGroups, getSubscribed } from '../../_db.js';
 import { withAuth, ok, fail, type AuthedHandler } from '../../_response.js';
 
 /**
@@ -16,6 +16,8 @@ async function fetchCreatedGroups(userId: number) {
   const { rows } = await sql`
     SELECT * FROM food_groups
     WHERE creator_id = ${userId}
+      AND status != 'cancelled'
+      AND (status != 'expired' OR expires_at > NOW() - INTERVAL '24 hours')
     ORDER BY created_at DESC
   `;
   return rows;
@@ -32,6 +34,8 @@ async function fetchJoinedGroups(userId: number) {
     SELECT fg.* FROM food_groups fg
     JOIN group_members gm ON gm.group_id = fg.id
     WHERE gm.user_id = ${userId} AND fg.creator_id != ${userId}
+      AND fg.status != 'cancelled'
+      AND (fg.status != 'expired' OR fg.expires_at > NOW() - INTERVAL '24 hours')
     ORDER BY gm.joined_at DESC
   `;
   return rows;
@@ -39,6 +43,7 @@ async function fetchJoinedGroups(userId: number) {
 
 const handler: AuthedHandler = async (_req, res, user) => {
   await ensureSchema();
+  await expireOverdueGroups();
   const [subscribed, created, joined] = await Promise.all([
     getSubscribed(user.id),
     fetchCreatedGroups(user.id),
