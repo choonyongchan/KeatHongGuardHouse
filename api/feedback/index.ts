@@ -2,8 +2,8 @@
  * @fileoverview POST /api/feedback — submit a user feedback message.
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql, ensureSchema } from '../_db.js';
+import { db } from '../_db.js';
+import { feedback } from '../_schema.js';
 import { withAuth, ok, fail, ApiError, type AuthedHandler } from '../_response.js';
 
 /**
@@ -28,11 +28,10 @@ function parseFeedbackBody(body: Record<string, unknown>): string {
  * @param message - The feedback text.
  */
 async function insertFeedback(userId: number, message: string): Promise<void> {
-  await sql`INSERT INTO feedback (user_id, message) VALUES (${userId}, ${message})`;
+  await db.insert(feedback).values({ userId, message });
 }
 
 const handler: AuthedHandler = async (req, res, user) => {
-  await ensureSchema();
   const message = parseFeedbackBody(req.body as Record<string, unknown>);
   await insertFeedback(user.id, message);
   ok(res, { message: 'Feedback submitted' });

@@ -2,8 +2,9 @@
  * @fileoverview GET /api/users/me — current user profile, groups created, and groups joined.
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql, ensureSchema, expireOverdueGroups, getSubscribed } from '../../_db.js';
+import { eq, and, ne, or, gt, getTableColumns } from 'drizzle-orm';
+import { db, expireOverdueGroups, getSubscribed } from '../../_db.js';
+import { foodGroups, groupMembers } from '../../_schema.js';
 import { withAuth, ok, fail, type AuthedHandler } from '../../_response.js';
 
 /**
@@ -13,14 +14,17 @@ import { withAuth, ok, fail, type AuthedHandler } from '../../_response.js';
  * @returns Array of group rows ordered by creation time descending.
  */
 async function fetchCreatedGroups(userId: number) {
-  const { rows } = await sql`
-    SELECT * FROM food_groups
-    WHERE creator_id = ${userId}
-      AND status != 'cancelled'
-      AND (status != 'expired' OR expires_at > NOW() - INTERVAL '24 hours')
-    ORDER BY created_at DESC
-  `;
-  return rows;
+  return db
+    .select()
+    .from(foodGroups)
+    .where(
+      and(
+        eq(foodGroups.creatorId, userId),
+        ne(foodGroups.status, 'cancelled'),
+        or(ne(foodGroups.status, 'expired'), gt(foodGroups.expiresAt, new Date(Date.now() - 24 * 60 * 60 * 1000))),
+      ),
+    )
+    .orderBy(foodGroups.createdAt);
 }
 
 /**
@@ -30,19 +34,22 @@ async function fetchCreatedGroups(userId: number) {
  * @returns Array of group rows ordered by join time descending.
  */
 async function fetchJoinedGroups(userId: number) {
-  const { rows } = await sql`
-    SELECT fg.* FROM food_groups fg
-    JOIN group_members gm ON gm.group_id = fg.id
-    WHERE gm.user_id = ${userId} AND fg.creator_id != ${userId}
-      AND fg.status != 'cancelled'
-      AND (fg.status != 'expired' OR fg.expires_at > NOW() - INTERVAL '24 hours')
-    ORDER BY gm.joined_at DESC
-  `;
-  return rows;
+  return db
+    .select(getTableColumns(foodGroups))
+    .from(foodGroups)
+    .innerJoin(groupMembers, eq(groupMembers.groupId, foodGroups.id))
+    .where(
+      and(
+        eq(groupMembers.userId, userId),
+        ne(foodGroups.creatorId, userId),
+        ne(foodGroups.status, 'cancelled'),
+        or(ne(foodGroups.status, 'expired'), gt(foodGroups.expiresAt, new Date(Date.now() - 24 * 60 * 60 * 1000))),
+      ),
+    )
+    .orderBy(groupMembers.joinedAt);
 }
 
 const handler: AuthedHandler = async (_req, res, user) => {
-  await ensureSchema();
   await expireOverdueGroups();
   const [subscribed, created, joined] = await Promise.all([
     getSubscribed(user.id),

@@ -2,8 +2,9 @@
  * @fileoverview POST /api/groups/[code]/leave — remove the authenticated user from a group.
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql, ensureSchema } from '../../_db.js';
+import { eq, and } from 'drizzle-orm';
+import { db } from '../../_db.js';
+import { foodGroups, groupMembers, type GroupStatus } from '../../_schema.js';
 import { withAuth, ok, fail, ApiError, type AuthedHandler } from '../../_response.js';
 
 /**
@@ -15,20 +16,26 @@ import { withAuth, ok, fail, ApiError, type AuthedHandler } from '../../_respons
  * @throws {ApiError} 404 if group not found; 403/409 for rule violations.
  */
 async function assertLeavable(code: string, userId: number) {
-  const { rows: gRows } = await sql`
-    SELECT id, creator_id, current_count, status
-    FROM food_groups WHERE code = ${code.toUpperCase()}
-  `;
+  const gRows = await db
+    .select({
+      id: foodGroups.id,
+      creatorId: foodGroups.creatorId,
+      currentCount: foodGroups.currentCount,
+      status: foodGroups.status,
+    })
+    .from(foodGroups)
+    .where(eq(foodGroups.code, code.toUpperCase()));
   const group = gRows[0];
   if (!group) throw new ApiError(404, 'Group not found');
-  if (group.creator_id === userId) throw new ApiError(403, 'Creator cannot leave — cancel the group instead');
+  if (group.creatorId === userId) throw new ApiError(403, 'Creator cannot leave — cancel the group instead');
   if (group.status === 'cancelled' || group.status === 'expired') {
     throw new ApiError(409, 'Group is no longer active');
   }
 
-  const { rows: mRows } = await sql`
-    SELECT 1 FROM group_members WHERE group_id = ${group.id as number} AND user_id = ${userId}
-  `;
+  const mRows = await db
+    .select({ userId: groupMembers.userId })
+    .from(groupMembers)
+    .where(and(eq(groupMembers.groupId, group.id), eq(groupMembers.userId, userId)));
   if (mRows.length === 0) throw new ApiError(409, 'Not a member of this group');
 
   return group;
@@ -47,24 +54,19 @@ async function removeMember(
   groupId: number,
   userId: number,
   newCount: number,
-  currentStatus: string,
+  currentStatus: GroupStatus,
 ): Promise<void> {
-  await sql`
-    DELETE FROM group_members WHERE group_id = ${groupId} AND user_id = ${userId}
-  `;
-  const newStatus = currentStatus === 'full' ? 'open' : currentStatus;
-  await sql`
-    UPDATE food_groups SET current_count = ${newCount}, status = ${newStatus} WHERE id = ${groupId}
-  `;
+  await db.delete(groupMembers).where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
+  const newStatus: GroupStatus = currentStatus === 'full' ? 'open' : currentStatus;
+  await db.update(foodGroups).set({ currentCount: newCount, status: newStatus }).where(eq(foodGroups.id, groupId));
 }
 
 const handler: AuthedHandler = async (req, res, user) => {
-  await ensureSchema();
   const code = (req.query.code as string) ?? '';
 
   const group = await assertLeavable(code, user.id);
-  const newCount = (group.current_count as number) - 1;
-  await removeMember(group.id as number, user.id, newCount, group.status as string);
+  const newCount = group.currentCount - 1;
+  await removeMember(group.id, user.id, newCount, group.status);
 
   ok(res, { message: 'Left group successfully', currentCount: newCount });
 };

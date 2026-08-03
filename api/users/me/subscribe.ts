@@ -2,8 +2,7 @@
  * @fileoverview POST /api/users/me/subscribe — toggle the notification subscription flag.
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { ensureSchema, setSubscribed } from '../../_db.js';
+import { setSubscribed } from '../../_db.js';
 import { withAuth, ok, fail, ApiError, type AuthedHandler } from '../../_response.js';
 
 /**
@@ -21,7 +20,6 @@ function parseSubscribeBody(body: Record<string, unknown>): boolean {
 }
 
 const handler: AuthedHandler = async (req, res, user) => {
-  await ensureSchema();
   const subscribed = parseSubscribeBody(req.body as Record<string, unknown>);
   await setSubscribed(user.id, subscribed);
   ok(res, { subscribed });

@@ -2,8 +2,9 @@
  * @fileoverview POST /api/groups/[code]/join — add the authenticated user to a group.
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql, ensureSchema } from '../../_db.js';
+import { eq, and } from 'drizzle-orm';
+import { db } from '../../_db.js';
+import { foodGroups, groupMembers, type GroupStatus } from '../../_schema.js';
 import { withAuth, ok, fail, ApiError, type AuthedHandler } from '../../_response.js';
 
 /**
@@ -13,11 +14,15 @@ import { withAuth, ok, fail, ApiError, type AuthedHandler } from '../../_respons
  * @returns Row with id, status, current_count, max_members; or null.
  */
 async function fetchGroupForJoin(code: string) {
-  const { rows } = await sql`
-    SELECT id, status, current_count, max_members
-    FROM food_groups
-    WHERE code = ${code.toUpperCase()}
-  `;
+  const rows = await db
+    .select({
+      id: foodGroups.id,
+      status: foodGroups.status,
+      currentCount: foodGroups.currentCount,
+      maxMembers: foodGroups.maxMembers,
+    })
+    .from(foodGroups)
+    .where(eq(foodGroups.code, code.toUpperCase()));
   return rows[0] ?? null;
 }
 
@@ -29,7 +34,7 @@ async function fetchGroupForJoin(code: string) {
  * @throws {ApiError} 404 if group not found; 409 for business rule violations.
  */
 async function assertJoinable(
-  group: Record<string, unknown> | null,
+  group: { id: number; status: GroupStatus; currentCount: number; maxMembers: number | null } | null,
   userId: number,
 ): Promise<void> {
   if (!group) throw new ApiError(404, 'Group not found');
@@ -37,10 +42,10 @@ async function assertJoinable(
   if (group.status === 'expired') throw new ApiError(409, 'Group has expired');
   if (group.status === 'full') throw new ApiError(409, 'Group is already full');
 
-  const { rows } = await sql`
-    SELECT 1 FROM group_members
-    WHERE group_id = ${group.id as number} AND user_id = ${userId}
-  `;
+  const rows = await db
+    .select({ userId: groupMembers.userId })
+    .from(groupMembers)
+    .where(and(eq(groupMembers.groupId, group.id), eq(groupMembers.userId, userId)));
   if (rows.length > 0) throw new ApiError(409, 'Already a member of this group');
 }
 
@@ -59,26 +64,19 @@ async function addMember(
   newCount: number,
   maxMembers: number | null,
 ): Promise<void> {
-  await sql`
-    INSERT INTO group_members (group_id, user_id) VALUES (${groupId}, ${userId})
-  `;
-  const newStatus = maxMembers !== null && newCount >= maxMembers ? 'full' : 'open';
-  await sql`
-    UPDATE food_groups
-    SET current_count = ${newCount}, status = ${newStatus}
-    WHERE id = ${groupId}
-  `;
+  await db.insert(groupMembers).values({ groupId, userId });
+  const newStatus: GroupStatus = maxMembers !== null && newCount >= maxMembers ? 'full' : 'open';
+  await db.update(foodGroups).set({ currentCount: newCount, status: newStatus }).where(eq(foodGroups.id, groupId));
 }
 
 const handler: AuthedHandler = async (req, res, user) => {
-  await ensureSchema();
   const code = (req.query.code as string) ?? '';
 
   const group = await fetchGroupForJoin(code);
   await assertJoinable(group, user.id);
 
-  const newCount = (group!.current_count as number) + 1;
-  await addMember(group!.id as number, user.id, newCount, group!.max_members as number);
+  const newCount = group!.currentCount + 1;
+  await addMember(group!.id, user.id, newCount, group!.maxMembers);
 
   ok(res, { message: 'Joined successfully', currentCount: newCount });
 };

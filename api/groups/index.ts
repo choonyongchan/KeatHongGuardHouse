@@ -3,8 +3,9 @@
  *               POST /api/groups — create a new group.
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sql, ensureSchema, expireOverdueGroups } from '../_db.js';
+import { sql, eq, and, inArray, getTableColumns } from 'drizzle-orm';
+import { db, expireOverdueGroups } from '../_db.js';
+import { foodGroups, groupMembers, users, type GroupVisibility } from '../_schema.js';
 import { generateUniqueCode } from '../_codegen.js';
 import { withAuth, ok, fail, ApiError, type AuthedHandler } from '../_response.js';
 
@@ -13,22 +14,20 @@ import { withAuth, ok, fail, ApiError, type AuthedHandler } from '../_response.j
 /**
  * Fetches all groups with status 'open' or 'full', ordered by expiry time.
  *
- * @returns Array of raw group row objects.
+ * @returns Array of group rows joined with creator info.
  */
 async function listOpenGroups() {
-  await ensureSchema();
   await expireOverdueGroups();
-  const { rows } = await sql`
-    SELECT
-      fg.*,
-      u.first_name AS creator_first_name,
-      u.username   AS creator_username
-    FROM food_groups fg
-    JOIN users u ON u.telegram_id = fg.creator_id
-    WHERE fg.status IN ('open', 'full') AND fg.visibility = 'public'
-    ORDER BY fg.expires_at ASC
-  `;
-  return rows;
+  return db
+    .select({
+      ...getTableColumns(foodGroups),
+      creatorFirstName: users.firstName,
+      creatorUsername: users.username,
+    })
+    .from(foodGroups)
+    .innerJoin(users, eq(users.telegramId, foodGroups.creatorId))
+    .where(and(inArray(foodGroups.status, ['open', 'full']), eq(foodGroups.visibility, 'public')))
+    .orderBy(foodGroups.expiresAt);
 }
 
 /**
@@ -61,17 +60,21 @@ function parseCreateBody(body: Record<string, unknown>) {
     throw new ApiError(400, 'expiryMinutes must be an integer between 15 and 480');
   }
 
-  const visibility = body.visibility === undefined ? 'public' : String(body.visibility);
-  if (visibility !== 'public' && visibility !== 'private') {
+  const visibilityInput = body.visibility === undefined ? 'public' : String(body.visibility);
+  if (visibilityInput !== 'public' && visibilityInput !== 'private') {
     throw new ApiError(400, "visibility must be 'public' or 'private'");
   }
+  const visibility: GroupVisibility = visibilityInput;
 
   return { title, externalLink, maxMembers, expiryMinutes, visibility };
 }
 
 /**
  * Inserts a new food group and adds the creator as the first member.
- * Uses a transaction to keep group + membership consistent.
+ * Built as chained writable CTEs (`WITH new_group AS (INSERT...RETURNING),
+ * first_member AS (INSERT...SELECT) SELECT * FROM new_group`) so the group
+ * insert and membership insert stay atomic in a single statement — the
+ * Neon HTTP driver has no interactive BEGIN/COMMIT transactions.
  *
  * @param creatorId - Telegram ID of the group creator.
  * @param title - Group display title.
@@ -89,29 +92,29 @@ async function insertGroup(
   maxMembers: number | null,
   expiryMinutes: number,
   code: string,
-  visibility: string,
+  visibility: GroupVisibility,
 ) {
-  const { rows } = await sql`
-    WITH new_group AS (
-      INSERT INTO food_groups (code, creator_id, title, external_link, max_members, expires_at, visibility)
-      VALUES (
-        ${code},
-        ${creatorId},
-        ${title},
-        ${externalLink},
-        ${maxMembers},
-        NOW() + (${expiryMinutes} || ' minutes')::INTERVAL,
-        ${visibility}
-      )
-      RETURNING *
-    ),
-    first_member AS (
-      INSERT INTO group_members (group_id, user_id)
-      SELECT id, creator_id FROM new_group
-    )
-    SELECT * FROM new_group
-  `;
-  return rows[0];
+  const newGroup = db.$with('new_group').as(
+    db
+      .insert(foodGroups)
+      .values({
+        code,
+        creatorId,
+        title,
+        externalLink,
+        maxMembers,
+        expiresAt: sql`NOW() + (${expiryMinutes} || ' minutes')::INTERVAL`,
+        visibility,
+      })
+      .returning(),
+  );
+
+  const firstMember = db.$with('first_member').as(
+    db.insert(groupMembers).select(db.select({ groupId: newGroup.id, userId: newGroup.creatorId }).from(newGroup)),
+  );
+
+  const [group] = await db.with(newGroup, firstMember).select().from(newGroup);
+  return group;
 }
 
 // ── Handlers ─────────────────────────────────────────────────────────────────
@@ -125,7 +128,7 @@ const handlePost: AuthedHandler = async (req, res, user) => {
   const body = parseCreateBody(req.body as Record<string, unknown>);
 
   const code = await generateUniqueCode(async (c) => {
-    const { rows } = await sql`SELECT 1 FROM food_groups WHERE code = ${c}`;
+    const rows = await db.select({ id: foodGroups.id }).from(foodGroups).where(eq(foodGroups.code, c)).limit(1);
     return rows.length > 0;
   });
 
