@@ -76,7 +76,7 @@ export function ShareCodeBlock({
             fontSize: 13, fontWeight: 700, cursor: 'pointer',
           }}
         >
-          📋 Copy code
+          📋 Copy
         </button>
         <button
           onClick={() => void handleShare()}

@@ -4,7 +4,7 @@ import { Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback } from '@tma.js/sdk-react';
 import { track } from '@vercel/analytics/react';
 import type { FoodGroupDetail, GroupVisibility } from '../types.ts';
-import { formatExpiry, formatMemberName, formatCountdown } from '../lib/formatters.ts';
+import { formatExpiry, formatMemberName, formatDurationLabel } from '../lib/formatters.ts';
 import { joinGroup, leaveGroup, cancelGroup, updateGroup } from '../lib/api.ts';
 import { openUserChat } from '../lib/share.ts';
 import { ShareCodeBlock } from './ShareCodeBlock.tsx';
@@ -178,6 +178,9 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
   }
 
   const maxLabel = group.maxMembers === null ? '∞' : String(group.maxMembers);
+  const countLabel = group.maxMembers === null
+    ? `${group.currentCount} pax`
+    : `${group.currentCount}/${maxLabel} pax`;
   const platform = group.externalLink ? platformLabel(group.externalLink) : null;
   const pill = statusPill(group.status);
 
@@ -237,13 +240,13 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
       {/* Meta */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: theme.textSecondary }}>
-          <span>👤</span> Hosted by {formatMemberName(group.creatorFirstName, group.creatorUsername)}
+          <span>👑</span> {formatMemberName(group.creatorFirstName, group.creatorUsername)}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: theme.textSecondary }}>
-          <span>👥</span> {group.currentCount}/{maxLabel} members
+          <span>👥</span> {countLabel}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: theme.textSecondary }}>
-          <span>⏳</span> Closes {formatExpiry(group.expiresAt)} ({formatCountdown(group.expiresAt)})
+          <span>⏳</span> {formatExpiry(group.expiresAt)} - {formatDurationLabel(group.expiresAt)}
         </div>
       </div>
 
@@ -278,46 +281,46 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
           fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
           color: theme.textSecondary, marginBottom: 8,
         }}>
-          MEMBERS ({group.currentCount}/{maxLabel})
+          MEMBERS ({countLabel})
         </div>
         <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${theme.border}` }}>
-          {group.members.map((m, i) => (
-            <div key={m.userId} style={{
-              fontSize: 13, color: theme.textPrimary,
-              padding: '8px 10px',
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: i % 2 === 0 ? theme.cardBg : theme.pageBg,
-            }}>
-              <span>{m.userId === group.creatorId ? '👑' : '·'}</span>
-              <span style={{ flex: 1, minWidth: 0 }}>{formatMemberName(m.firstName, m.username)}</span>
-              {m.userId !== currentUserId && (
-                m.username ? (
-                  <button
-                    onClick={() => {
-                      hapticFeedback.impactOccurred('light');
-                      track('Message Member', { code: group.code });
-                      openUserChat(m.username!);
-                    }}
-                    aria-label={`Message ${formatMemberName(m.firstName, m.username)} on Telegram`}
-                    style={{
-                      flexShrink: 0, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'transparent', border: 'none', borderRadius: 6,
-                      fontSize: 13, cursor: 'pointer', padding: 0,
-                    }}
-                  >
-                    💬
-                  </button>
-                ) : (
-                  <span
-                    aria-label="No Telegram username set"
-                    style={{ flexShrink: 0, fontSize: 10, color: theme.textSecondary, opacity: 0.6 }}
-                  >
-                    no username
-                  </span>
-                )
-              )}
-            </div>
-          ))}
+          {group.members.map((m, i) => {
+            const clickable = m.userId !== currentUserId && !!m.username;
+            return (
+              <div
+                key={m.userId}
+                onClick={clickable ? () => {
+                  hapticFeedback.impactOccurred('light');
+                  track('Message Member', { code: group.code });
+                  openUserChat(m.username!);
+                } : undefined}
+                role={clickable ? 'button' : undefined}
+                aria-label={clickable ? `Message ${formatMemberName(m.firstName, m.username)} on Telegram` : undefined}
+                style={{
+                  fontSize: 13, color: theme.textPrimary,
+                  padding: '8px 10px',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  background: i % 2 === 0 ? theme.cardBg : theme.pageBg,
+                  cursor: clickable ? 'pointer' : 'default',
+                }}
+              >
+                <span>{m.userId === group.creatorId ? '👑' : '·'}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>{formatMemberName(m.firstName, m.username)}</span>
+                {m.userId !== currentUserId && (
+                  m.username ? (
+                    <span style={{ flexShrink: 0, fontSize: 13 }}>💬</span>
+                  ) : (
+                    <span
+                      aria-label="No Telegram username set"
+                      style={{ flexShrink: 0, fontSize: 10, color: theme.textSecondary, opacity: 0.6 }}
+                    >
+                      no username
+                    </span>
+                  )
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

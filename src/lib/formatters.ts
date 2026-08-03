@@ -48,3 +48,21 @@ export function formatCountdown(isoDate: string): string {
 export function formatMemberName(firstName: string, username: string | null): string {
   return username ? `@${username}` : firstName;
 }
+
+/**
+ * Returns a human-readable duration label (e.g. "58min", "2h 5min", "2h", "Expired").
+ *
+ * @param isoDate - ISO 8601 expiry date string.
+ * @returns Duration string relative to now.
+ */
+export function formatDurationLabel(isoDate: string): string {
+  const diffMs = new Date(isoDate).getTime() - Date.now();
+  if (diffMs <= 0) return 'Expired';
+
+  const totalMin = Math.floor(diffMs / 60_000);
+  if (totalMin < 60) return `${totalMin}min`;
+
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
+}
