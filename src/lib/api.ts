@@ -113,6 +113,23 @@ export function leaveGroup(code: string): Promise<{ message: string; currentCoun
 }
 
 /**
+ * Updates a group's member cap and/or visibility (creator only).
+ *
+ * @param code - Uppercase group code.
+ * @param patch - Fields to update; omitted fields are left unchanged.
+ * @returns Confirmation message.
+ */
+export function updateGroup(
+  code: string,
+  patch: { maxMembers?: number | null; visibility?: GroupVisibility },
+): Promise<{ message: string }> {
+  return apiFetch(`/api/groups/${code}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
+/**
  * Cancels a group by code (creator only).
  *
  * @param code - Uppercase group code.

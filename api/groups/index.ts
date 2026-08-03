@@ -7,6 +7,7 @@ import { sql, eq, and, inArray, getTableColumns } from 'drizzle-orm';
 import { db, expireOverdueGroups } from '../_db.js';
 import { foodGroups, groupMembers, users, type GroupVisibility } from '../_schema.js';
 import { generateUniqueCode } from '../_codegen.js';
+import { parseMaxMembers, parseVisibility } from '../_validation.js';
 import { withAuth, ok, fail, ApiError, type AuthedHandler } from '../_response.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -46,25 +47,14 @@ function parseCreateBody(body: Record<string, unknown>) {
     throw new ApiError(400, 'External link must start with http');
   }
 
-  let maxMembers: number | null = null;
-  if (body.maxMembers !== null && body.maxMembers !== undefined) {
-    const n = Number(body.maxMembers);
-    if (!Number.isInteger(n) || n < 2 || n > 50) {
-      throw new ApiError(400, 'maxMembers must be an integer between 2 and 50, or null for no limit');
-    }
-    maxMembers = n;
-  }
+  const maxMembers = parseMaxMembers(body.maxMembers);
 
   const expiryMinutes = Number(body.expiryMinutes);
   if (!Number.isInteger(expiryMinutes) || expiryMinutes < 15 || expiryMinutes > 480) {
     throw new ApiError(400, 'expiryMinutes must be an integer between 15 and 480');
   }
 
-  const visibilityInput = body.visibility === undefined ? 'public' : String(body.visibility);
-  if (visibilityInput !== 'public' && visibilityInput !== 'private') {
-    throw new ApiError(400, "visibility must be 'public' or 'private'");
-  }
-  const visibility: GroupVisibility = visibilityInput;
+  const visibility = parseVisibility(body.visibility);
 
   return { title, externalLink, maxMembers, expiryMinutes, visibility };
 }

@@ -1,11 +1,103 @@
 import { useState } from 'react';
+import type { CSSProperties } from 'react';
 import { Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback } from '@tma.js/sdk-react';
-import type { FoodGroupDetail } from '../types.ts';
+import type { FoodGroupDetail, GroupVisibility } from '../types.ts';
 import { formatExpiry, formatMemberName, formatCountdown } from '../lib/formatters.ts';
-import { joinGroup, leaveGroup, cancelGroup } from '../lib/api.ts';
+import { joinGroup, leaveGroup, cancelGroup, updateGroup } from '../lib/api.ts';
 import { copyInviteCode, shareInvite, openUserChat } from '../lib/share.ts';
 import { theme } from '../lib/theme.ts';
+
+const MEMBER_CAP_PRESETS = [2, 4, 8, 16, 32] as const;
+
+function settingChipStyle(selected: boolean): CSSProperties {
+  return {
+    padding: '6px 12px',
+    borderRadius: 20,
+    border: selected ? `2px solid ${theme.accent}` : `1.5px solid ${theme.border}`,
+    background: selected ? theme.accentLight : 'transparent',
+    color: selected ? theme.accent : theme.textSecondary,
+    fontWeight: 600,
+    fontSize: 12,
+    cursor: 'pointer',
+  };
+}
+
+interface HostSettingsProps {
+  group: FoodGroupDetail;
+  onSaved: (patch: { maxMembers?: number | null; visibility?: GroupVisibility }) => void;
+}
+
+function HostSettings({ group, onSaved }: HostSettingsProps) {
+  const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function apply(patch: { maxMembers?: number | null; visibility?: GroupVisibility }, key: string) {
+    hapticFeedback.impactOccurred('light');
+    setSaving(key);
+    setError(null);
+    try {
+      await updateGroup(group.code, patch);
+      onSaved(patch);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update group');
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{
+        fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+        color: theme.textSecondary, marginBottom: 8,
+      }}>
+        GROUP SETTINGS
+      </div>
+
+      <div style={{ fontSize: 12, color: theme.textSecondary, marginBottom: 6 }}>Member cap</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+        {MEMBER_CAP_PRESETS.map((n) => (
+          <button
+            key={n}
+            disabled={saving !== null}
+            onClick={() => void apply({ maxMembers: n }, `cap-${n}`)}
+            style={settingChipStyle(group.max_members === n)}
+          >
+            {saving === `cap-${n}` ? <Spinner size="s" /> : n}
+          </button>
+        ))}
+        <button
+          disabled={saving !== null}
+          onClick={() => void apply({ maxMembers: null }, 'cap-null')}
+          style={settingChipStyle(group.max_members === null)}
+        >
+          {saving === 'cap-null' ? <Spinner size="s" /> : 'No Limit'}
+        </button>
+      </div>
+
+      <div style={{ fontSize: 12, color: theme.textSecondary, marginBottom: 6 }}>Who can find this group?</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <button
+          disabled={saving !== null}
+          onClick={() => void apply({ visibility: 'public' }, 'vis-public')}
+          style={settingChipStyle(group.visibility === 'public')}
+        >
+          {saving === 'vis-public' ? <Spinner size="s" /> : '🌐 Public'}
+        </button>
+        <button
+          disabled={saving !== null}
+          onClick={() => void apply({ visibility: 'private' }, 'vis-private')}
+          style={settingChipStyle(group.visibility === 'private')}
+        >
+          {saving === 'vis-private' ? <Spinner size="s" /> : '🔒 Private'}
+        </button>
+      </div>
+
+      {error && <p style={{ color: theme.error, fontSize: 11, marginTop: 8 }}>{error}</p>}
+    </div>
+  );
+}
 
 interface GroupDetailPanelProps {
   group: FoodGroupDetail;
@@ -49,12 +141,16 @@ function statusPill(status: FoodGroupDetail['status']): { label: string; bg: str
   return { label: 'Expired', bg: theme.errorLight, color: theme.error };
 }
 
-export function GroupDetailPanel({ group, currentUserId, onClose, onMutated }: GroupDetailPanelProps) {
+export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onMutated }: GroupDetailPanelProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [overrides, setOverrides] = useState<{ max_members?: number | null; visibility?: GroupVisibility }>({});
+  const group = { ...groupProp, ...overrides };
   const action = resolveAction(group, currentUserId);
+  const isCreator = group.creator_id === currentUserId;
+  const isActive = group.status === 'open' || group.status === 'full';
 
   async function handleAction() {
     if (!action) return;
@@ -94,6 +190,15 @@ export function GroupDetailPanel({ group, currentUserId, onClose, onMutated }: G
     } catch {
       flashCopyFeedback('Could not share');
     }
+  }
+
+  function handleSettingsSaved(patch: { maxMembers?: number | null; visibility?: GroupVisibility }) {
+    setOverrides((o) => ({
+      ...o,
+      ...(patch.maxMembers !== undefined ? { max_members: patch.maxMembers } : {}),
+      ...(patch.visibility !== undefined ? { visibility: patch.visibility } : {}),
+    }));
+    onMutated();
   }
 
   const maxLabel = group.max_members === null ? '∞' : String(group.max_members);
@@ -206,6 +311,9 @@ export function GroupDetailPanel({ group, currentUserId, onClose, onMutated }: G
           <span>⏳</span> Closes {formatExpiry(group.expires_at)} ({formatCountdown(group.expires_at)})
         </div>
       </div>
+
+      {/* Host settings */}
+      {isCreator && isActive && <HostSettings group={group} onSaved={handleSettingsSaved} />}
 
       {/* Order link */}
       {group.external_link && (
