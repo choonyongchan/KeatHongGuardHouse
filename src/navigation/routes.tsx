@@ -9,6 +9,7 @@ import { BrowsePage } from '@/pages/BrowsePage.tsx';
 import { CreatePage } from '@/pages/CreatePage.tsx';
 import { MyGroupsPage } from '@/pages/MyGroupsPage.tsx';
 import { SettingsPage } from '@/pages/SettingsPage.tsx';
+import { HelpPage } from '@/pages/HelpPage.tsx';
 
 /** A single application route. */
 export interface AppRoute {
@@ -24,4 +25,5 @@ export const routes: AppRoute[] = [
   { path: '/create',    Component: CreatePage,    tabLabel: 'Create',   tabIcon: '➕' },
   { path: '/my-groups', Component: MyGroupsPage,  tabLabel: 'Mine',     tabIcon: '👤' },
   { path: '/settings',  Component: SettingsPage,  tabLabel: 'Settings', tabIcon: '⚙️' },
+  { path: '/help',      Component: HelpPage,      tabLabel: 'Help',     tabIcon: '❓' },
 ];
