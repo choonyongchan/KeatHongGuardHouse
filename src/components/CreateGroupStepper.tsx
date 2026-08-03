@@ -2,9 +2,10 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback } from '@tma.js/sdk-react';
+import { track } from '@vercel/analytics/react';
 import { createGroup } from '../lib/api.ts';
 import type { FoodGroup } from '../types.ts';
-import { copyInviteCode, shareInvite } from '../lib/share.ts';
+import { ShareCodeBlock } from './ShareCodeBlock.tsx';
 import { theme } from '../lib/theme.ts';
 
 interface GroupDraft {
@@ -111,33 +112,6 @@ interface InviteProps {
 }
 
 function InviteView({ group, onViewDetails }: InviteProps) {
-  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
-
-  function flashCopyFeedback(message: string) {
-    setCopyFeedback(message);
-    setTimeout(() => setCopyFeedback(null), 2000);
-  }
-
-  async function handleCopyCode() {
-    hapticFeedback.impactOccurred('light');
-    try {
-      await copyInviteCode(group.code);
-      flashCopyFeedback('Code copied!');
-    } catch {
-      flashCopyFeedback('Could not copy');
-    }
-  }
-
-  async function handleShare() {
-    hapticFeedback.impactOccurred('light');
-    try {
-      const result = await shareInvite(group.code, group.title);
-      if (result === 'copied') flashCopyFeedback('Link copied!');
-    } catch {
-      flashCopyFeedback('Could not share');
-    }
-  }
-
   return (
     <div>
       <p style={hintStyle}>Get the word out to your neighbours</p>
@@ -146,50 +120,7 @@ function InviteView({ group, onViewDetails }: InviteProps) {
         <span>🔍</span> Friends can find it in the <strong style={{ color: theme.textPrimary }}>&nbsp;Browse&nbsp;</strong> tab
       </div>
 
-      <div style={{
-        background: theme.accentLight,
-        border: `1.5px solid ${theme.accentBorder}`,
-        borderRadius: 12,
-        padding: '14px 16px',
-        textAlign: 'center',
-      }}>
-        <div style={{
-          fontSize: 28, fontWeight: 800, letterSpacing: 3,
-          color: theme.textPrimary, fontFamily: 'monospace',
-          marginBottom: 12, wordBreak: 'break-all',
-        }}>
-          {group.code}
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={() => void handleCopyCode()}
-            style={{
-              flex: 1, padding: '10px 0', borderRadius: 10,
-              background: theme.cardBg, color: theme.textPrimary,
-              border: `1.5px solid ${theme.accentBorder}`,
-              fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
-            📋 Copy code
-          </button>
-          <button
-            onClick={() => void handleShare()}
-            style={{
-              flex: 1, padding: '10px 0', borderRadius: 10,
-              background: theme.accent, color: '#fff',
-              border: 'none',
-              fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
-            ↗ Share link
-          </button>
-        </div>
-        {copyFeedback && (
-          <div style={{ fontSize: 11, fontWeight: 700, color: theme.accent, marginTop: 8 }}>
-            {copyFeedback}
-          </div>
-        )}
-      </div>
+      <ShareCodeBlock code={group.code} title={group.title} shareLabel="Share link" />
 
       <button
         onClick={onViewDetails}
@@ -254,6 +185,7 @@ export function CreateGroupStepper({ onCreated }: CreateGroupStepperProps) {
         visibility: 'public',
       });
       hapticFeedback.notificationOccurred('success');
+      track('Create Group', { code: group.code });
       setCreatedGroup(group);
     } catch (e) {
       setTitleError(e instanceof Error ? e.message : 'Failed to create group');

@@ -4,8 +4,9 @@
 
 import { useEffect } from 'react';
 import { Navigate, Route, Routes, HashRouter, useLocation, useNavigate } from 'react-router-dom';
-import { useLaunchParams, hapticFeedback } from '@tma.js/sdk-react';
+import { useLaunchParams, useSignal, hapticFeedback, miniApp } from '@tma.js/sdk-react';
 import { AppRoot, Tabbar } from '@telegram-apps/telegram-ui';
+import { Analytics } from '@vercel/analytics/react';
 
 import { routes } from '@/navigation/routes.tsx';
 import { ToastProvider } from './ToastProvider.tsx';
@@ -83,10 +84,15 @@ function AppTabbar() {
  */
 export function App() {
   const lp = useLaunchParams();
+  const isDark = useSignal(miniApp.isDark);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+  }, [isDark]);
 
   return (
     <AppRoot
-      appearance="light"
+      appearance={isDark ? 'dark' : 'light'}
       platform={['macos', 'ios'].includes(lp.tgWebAppPlatform) ? 'ios' : 'base'}
     >
       <ToastProvider>
@@ -99,6 +105,7 @@ export function App() {
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
           <AppTabbar />
+          <Analytics />
         </HashRouter>
       </ToastProvider>
     </AppRoot>

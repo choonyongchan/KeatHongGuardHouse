@@ -2,6 +2,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback, useSignal, initData } from '@tma.js/sdk-react';
+import { track } from '@vercel/analytics/react';
 
 import { getMe, getGroup, cancelGroup, leaveGroup } from '../lib/api.ts';
 import type { FoodGroup, FoodGroupDetail, UserProfile } from '../types.ts';
@@ -58,6 +59,7 @@ export function MyGroupsPage() {
     try {
       await cancelGroup(group.code);
       hapticFeedback.notificationOccurred('success');
+      track('Cancel Group', { code: group.code });
       void mutate();
     } catch (e) {
       hapticFeedback.notificationOccurred('error');
@@ -73,6 +75,7 @@ export function MyGroupsPage() {
     try {
       await leaveGroup(group.code);
       hapticFeedback.notificationOccurred('success');
+      track('Leave Group', { code: group.code });
       void mutate();
     } catch (e) {
       hapticFeedback.notificationOccurred('error');

@@ -2,10 +2,12 @@ import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback } from '@tma.js/sdk-react';
+import { track } from '@vercel/analytics/react';
 import type { FoodGroupDetail, GroupVisibility } from '../types.ts';
 import { formatExpiry, formatMemberName, formatCountdown } from '../lib/formatters.ts';
 import { joinGroup, leaveGroup, cancelGroup, updateGroup } from '../lib/api.ts';
-import { copyInviteCode, shareInvite, openUserChat } from '../lib/share.ts';
+import { openUserChat } from '../lib/share.ts';
+import { ShareCodeBlock } from './ShareCodeBlock.tsx';
 import { theme } from '../lib/theme.ts';
 
 const MEMBER_CAP_PRESETS = [2, 4, 8, 16, 32] as const;
@@ -136,7 +138,7 @@ function platformLabel(link: string): string {
 
 function statusPill(status: FoodGroupDetail['status']): { label: string; bg: string; color: string } {
   if (status === 'open')      return { label: 'Open', bg: theme.accentLight, color: theme.accent };
-  if (status === 'full')      return { label: 'Full', bg: '#fff7e6', color: '#b45309' };
+  if (status === 'full')      return { label: 'Full', bg: theme.warningBg, color: theme.warningText };
   if (status === 'cancelled') return { label: 'Cancelled', bg: theme.errorLight, color: theme.error };
   return { label: 'Expired', bg: theme.errorLight, color: theme.error };
 }
@@ -145,7 +147,6 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<{ max_members?: number | null; visibility?: GroupVisibility }>({});
   const group = { ...groupProp, ...overrides };
   const action = resolveAction(group, currentUserId);
@@ -164,31 +165,6 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
       setError(e instanceof Error ? e.message : 'Something went wrong');
     } finally {
       setLoading(false);
-    }
-  }
-
-  function flashCopyFeedback(message: string) {
-    setCopyFeedback(message);
-    setTimeout(() => setCopyFeedback(null), 2000);
-  }
-
-  async function handleCopyCode() {
-    hapticFeedback.impactOccurred('light');
-    try {
-      await copyInviteCode(group.code);
-      flashCopyFeedback('Code copied!');
-    } catch {
-      flashCopyFeedback('Could not copy');
-    }
-  }
-
-  async function handleShare() {
-    hapticFeedback.impactOccurred('light');
-    try {
-      const result = await shareInvite(group.code, group.title);
-      if (result === 'copied') flashCopyFeedback('Link copied!');
-    } catch {
-      flashCopyFeedback('Could not share');
     }
   }
 
@@ -250,54 +226,13 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
       </div>
 
       {/* Invite section */}
-      <div style={{
-        background: theme.accentLight,
-        border: `1.5px solid ${theme.accentBorder}`,
-        borderRadius: 12,
-        padding: '14px 16px',
-        marginBottom: 14,
-        textAlign: 'center',
-      }}>
-        <div style={{ fontSize: 12, color: theme.textSecondary, marginBottom: 10, lineHeight: 1.5 }}>
-          Share this code — anyone with it can find and join this group.
-        </div>
-        <div style={{
-          fontSize: 30, fontWeight: 800, letterSpacing: 3,
-          color: theme.textPrimary, fontFamily: 'monospace',
-          marginBottom: 12, wordBreak: 'break-all',
-        }}>
-          {group.code}
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={() => void handleCopyCode()}
-            style={{
-              flex: 1, padding: '10px 0', borderRadius: 10,
-              background: theme.cardBg, color: theme.textPrimary,
-              border: `1.5px solid ${theme.accentBorder}`,
-              fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
-            📋 Copy code
-          </button>
-          <button
-            onClick={() => void handleShare()}
-            style={{
-              flex: 1, padding: '10px 0', borderRadius: 10,
-              background: theme.accent, color: '#fff',
-              border: 'none',
-              fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
-            ↗ Share
-          </button>
-        </div>
-        {copyFeedback && (
-          <div style={{ fontSize: 11, fontWeight: 700, color: theme.accent, marginTop: 8 }}>
-            {copyFeedback}
-          </div>
-        )}
-      </div>
+      <ShareCodeBlock
+        code={group.code}
+        title={group.title}
+        caption="Share this code — anyone with it can find and join this group."
+        marginBottom={14}
+        codeFontSize={30}
+      />
 
       {/* Meta */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
@@ -360,6 +295,7 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
                   <button
                     onClick={() => {
                       hapticFeedback.impactOccurred('light');
+                      track('Message Member', { code: group.code });
                       openUserChat(m.username!);
                     }}
                     aria-label={`Message ${formatMemberName(m.first_name, m.username)} on Telegram`}
@@ -416,7 +352,7 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
       {action === 'cancel' && confirming && (
         <div style={{ display: 'flex', gap: 8 }}>
           <button
-            onClick={() => { setConfirming(false); void handleAction(); }}
+            onClick={() => { setConfirming(false); track('Cancel Group', { code: group.code }); void handleAction(); }}
             disabled={loading}
             style={{
               flex: 1, padding: '10px 0', borderRadius: 10,

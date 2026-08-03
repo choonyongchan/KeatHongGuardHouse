@@ -19,8 +19,8 @@ function statusBadge(status: FoodGroup['status']): { label: string; bg: string; 
   switch (status) {
     case 'open':      return { label: 'OPEN',      bg: theme.accentLight, color: theme.accent,      border: theme.accentBorder };
     case 'full':      return { label: 'FULL',       bg: theme.errorLight,  color: theme.error,       border: theme.errorBorder };
-    case 'expired':   return { label: 'EXPIRED',    bg: '#f5f5f5',         color: theme.textMuted,   border: theme.border };
-    case 'cancelled': return { label: 'CANCELLED',  bg: '#f5f5f5',         color: theme.textMuted,   border: theme.border };
+    case 'expired':   return { label: 'EXPIRED',    bg: theme.badgeBg,     color: theme.textMuted,   border: theme.border };
+    case 'cancelled': return { label: 'CANCELLED',  bg: theme.badgeBg,     color: theme.textMuted,   border: theme.border };
   }
 }
 

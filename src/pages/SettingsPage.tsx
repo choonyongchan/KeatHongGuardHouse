@@ -3,29 +3,50 @@
  */
 
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import useSWR from 'swr';
-import {
-  Cell,
-  Section,
-  Switch,
-  Input,
-  Button,
-  Spinner,
-} from '@telegram-apps/telegram-ui';
+import { Switch, Input, Button, Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback } from '@tma.js/sdk-react';
+import { track } from '@vercel/analytics/react';
 
 import { getMe, setSubscription, submitFeedback } from '../lib/api.ts';
 import type { UserProfile } from '../types.ts';
+import { theme } from '../lib/theme.ts';
+
+function SectionLabel({ label }: { label: string }) {
+  return (
+    <div style={{
+      fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+      color: theme.textSecondary, marginBottom: 8,
+    }}>
+      {label}
+    </div>
+  );
+}
+
+function Card({ children }: { children: ReactNode }) {
+  return (
+    <div style={{
+      background: theme.cardBg,
+      borderRadius: 14,
+      boxShadow: theme.shadow,
+      marginBottom: 20,
+      overflow: 'hidden',
+    }}>
+      {children}
+    </div>
+  );
+}
 
 /**
- * Renders the notification subscription toggle cell.
+ * Renders the notification subscription toggle row.
  *
  * @param props.subscribed - Current subscription state.
  * @param props.onToggle - Called with the new desired state.
  * @param props.loading - Whether a toggle request is in-flight.
- * @returns A Cell with a Switch component.
+ * @returns A themed row with a Switch component.
  */
-function SubscriptionCell({
+function SubscriptionRow({
   subscribed,
   onToggle,
   loading,
@@ -35,16 +56,20 @@ function SubscriptionCell({
   loading: boolean;
 }) {
   return (
-    <Cell
-      after={
-        loading
-          ? <Spinner size="s" />
-          : <Switch checked={subscribed} onChange={(e) => onToggle(e.target.checked)} />
-      }
-      description="Notify me when groups open"
-    >
-      Notifications
-    </Cell>
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '14px 16px',
+    }}>
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: theme.textPrimary }}>Notifications</div>
+        <div style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2 }}>
+          Notify me when groups open
+        </div>
+      </div>
+      {loading
+        ? <Spinner size="s" />
+        : <Switch checked={subscribed} onChange={(e) => onToggle(e.target.checked)} />}
+    </div>
   );
 }
 
@@ -70,6 +95,7 @@ function FeedbackPanel({ onClose }: { onClose: () => void }) {
     try {
       await submitFeedback(message);
       hapticFeedback.notificationOccurred('success');
+      track('Submit Feedback');
       setDone(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to submit');
@@ -79,10 +105,10 @@ function FeedbackPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div style={{ padding: '12px 16px 24px' }}>
+    <div style={{ padding: '0 16px 16px' }}>
       {done ? (
         <>
-          <p style={{ color: 'var(--tg-theme-text-color)', textAlign: 'center', margin: '24px 0' }}>
+          <p style={{ color: theme.textPrimary, textAlign: 'center', margin: '24px 0' }}>
             ✅ Thanks for your feedback!
           </p>
           <Button mode="filled" size="l" stretched onClick={onClose}>Close</Button>
@@ -144,34 +170,52 @@ export function SettingsPage() {
 
   return (
     <div style={{ paddingBottom: 80, paddingTop: 16 }}>
-      <Section header="Notifications">
-        <SubscriptionCell
-          subscribed={data?.subscribed ?? false}
-          onToggle={(val) => void handleToggle(val)}
-          loading={toggleLoading}
-        />
-        {toggleError && (
-          <div style={{ padding: '4px 16px 8px', fontSize: 12, color: '#ef4444' }}>
-            {toggleError}
+      {/* Header */}
+      <div style={{ padding: '0 16px 16px' }}>
+        <div style={{ fontWeight: 800, fontSize: 22, color: theme.textPrimary }}>Settings</div>
+      </div>
+
+      <div style={{ padding: '0 16px' }}>
+        <SectionLabel label="NOTIFICATIONS" />
+        <Card>
+          <SubscriptionRow
+            subscribed={data?.subscribed ?? false}
+            onToggle={(val) => void handleToggle(val)}
+            loading={toggleLoading}
+          />
+          {toggleError && (
+            <div style={{ padding: '0 16px 12px', fontSize: 12, color: theme.error }}>
+              {toggleError}
+            </div>
+          )}
+        </Card>
+
+        <SectionLabel label="SUPPORT" />
+        <Card>
+          <div
+            onClick={() => setShowFeedback((v) => !v)}
+            style={{
+              padding: '14px 16px', cursor: 'pointer',
+              fontSize: 14, fontWeight: 600, color: theme.textPrimary,
+            }}
+          >
+            Send Feedback
           </div>
-        )}
-      </Section>
+          {showFeedback && <FeedbackPanel onClose={() => setShowFeedback(false)} />}
+        </Card>
 
-      <Section header="Support">
-        <Cell
-          onClick={() => setShowFeedback((v) => !v)}
-          style={{ cursor: 'pointer' }}
-        >
-          Send Feedback
-        </Cell>
-        {showFeedback && <FeedbackPanel onClose={() => setShowFeedback(false)} />}
-      </Section>
-
-      <Section header="About">
-        <Cell description="Connecting Neighbours One Group A Time">
-          KeatHong GuardHouse v0.1.0
-        </Cell>
-      </Section>
+        <SectionLabel label="ABOUT" />
+        <Card>
+          <div style={{ padding: '14px 16px' }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: theme.textPrimary }}>
+              KeatHong GuardHouse v0.1.0
+            </div>
+            <div style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2 }}>
+              Connecting Neighbours One Group A Time
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

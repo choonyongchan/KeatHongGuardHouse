@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback } from '@tma.js/sdk-react';
+import { track } from '@vercel/analytics/react';
 import { getGroup, joinGroup } from '../lib/api.ts';
 import type { FoodGroupDetail } from '../types.ts';
 import { theme } from '../lib/theme.ts';
@@ -38,6 +39,7 @@ export function JoinByCodeInput({ onGroupFound, onJoined }: JoinByCodeInputProps
       if (isLink) {
         await joinGroup(clean);
         hapticFeedback.notificationOccurred('success');
+        track('Join Group', { code: clean });
         onJoined(clean);
       } else {
         const group = await getGroup(clean);

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback, useSignal, initData } from '@tma.js/sdk-react';
+import { track } from '@vercel/analytics/react';
 import { useNavigate } from 'react-router-dom';
 
 import { getGroups, getGroup, joinGroup } from '../lib/api.ts';
@@ -53,6 +54,7 @@ export function BrowsePage() {
     try {
       await joinGroup(group.code);
       hapticFeedback.notificationOccurred('success');
+      track('Join Group', { code: group.code });
       void mutate();
     } catch (e) {
       hapticFeedback.notificationOccurred('error');
