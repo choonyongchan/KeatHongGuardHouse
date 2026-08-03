@@ -107,9 +107,16 @@ export function MyGroupsPage() {
           <div key={g.id}>
             <GroupCard
               group={g}
-              actions={confirmTarget?.code === g.code ? undefined : [
+              actions={confirmTarget?.code === g.code ? [
+                {
+                  label: 'Confirm Cancel', style: 'danger',
+                  onClick: () => { void handleCancel(g); setConfirmTarget(null); },
+                  loading: actionLoadingId === g.id,
+                },
+                { label: 'No', style: 'outline', onClick: () => setConfirmTarget(null) },
+              ] : [
                 { label: 'Details', style: 'outline', onClick: () => void handleDetails(g) },
-                { label: 'Cancel Group', style: 'danger', onClick: () => setConfirmTarget(g), loading: actionLoadingId === g.id },
+                { label: 'Cancel', style: 'danger', onClick: () => setConfirmTarget(g) },
               ]}
             />
             {selected?.code === g.code && confirmTarget?.code !== g.code && (
@@ -119,40 +126,6 @@ export function MyGroupsPage() {
                 onClose={() => setSelected(null)}
                 onMutated={() => void mutate()}
               />
-            )}
-            {confirmTarget?.code === g.code && (
-              <div style={{
-                background: theme.cardBg, borderRadius: 14, marginBottom: 8,
-                padding: '10px 12px 14px', boxShadow: theme.shadow,
-              }}>
-                <p style={{ fontSize: 13, color: theme.textPrimary, marginBottom: 12 }}>
-                  Cancel "{confirmTarget.title}"? This can't be undone.
-                </p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => setConfirmTarget(null)}
-                    style={{
-                      flex: 1, padding: '10px 0', borderRadius: 10,
-                      background: 'transparent', color: theme.textSecondary,
-                      border: `1.5px solid ${theme.border}`,
-                      fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                    }}
-                  >
-                    No
-                  </button>
-                  <button
-                    onClick={() => { void handleCancel(confirmTarget); setConfirmTarget(null); }}
-                    style={{
-                      flex: 1, padding: '10px 0', borderRadius: 10,
-                      background: 'transparent', color: theme.error,
-                      border: `1.5px solid ${theme.error}`,
-                      fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                    }}
-                  >
-                    Confirm Cancel
-                  </button>
-                </div>
-              </div>
             )}
           </div>
         ))}

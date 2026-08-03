@@ -41,18 +41,30 @@ export function copyInviteCode(code: string): Promise<void> {
 }
 
 /**
- * Shares a group's invite link via Telegram's native share sheet when
- * available (i.e. running inside Telegram), else falls back to a clipboard copy.
+ * Shares a group's invite link via the phone's native OS share sheet
+ * (Web Share API) when available, so it can be sent through any app —
+ * not just Telegram. Falls back to Telegram's own share sheet, then to
+ * a clipboard copy, in that order.
  *
  * @param code - Uppercase group invite code.
  * @param title - Group title, used as share text.
- * @returns `'shared'` if the share sheet was used, `'copied'` if it fell back to clipboard.
+ * @returns `'shared'` if a share sheet was used, `'copied'` if it fell back to clipboard.
  */
 export async function shareInvite(code: string, title: string): Promise<'shared' | 'copied'> {
   const link = buildInviteLink(code);
+  const text = `Join "${title}" on KeatHong GuardHouse`;
+
+  if (typeof navigator.share === 'function') {
+    try {
+      await navigator.share({ title: text, url: link });
+      return 'shared';
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return 'shared';
+    }
+  }
 
   if (shareURL.isAvailable()) {
-    shareURL(link, `Join "${title}" on KeatHong GuardHouse`);
+    shareURL(link, text);
     return 'shared';
   }
 

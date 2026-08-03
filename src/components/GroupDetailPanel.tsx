@@ -100,7 +100,7 @@ export function GroupDetailPanel({ group, currentUserId, onClose, onMutated }: G
   const platform = group.external_link ? platformLabel(group.external_link) : null;
   const pill = statusPill(group.status);
 
-  const actionLabel = action === 'join' ? 'Join Group' : action === 'leave' ? 'Leave' : 'Cancel Group';
+  const actionLabel = action === 'join' ? 'Join Group' : action === 'leave' ? 'Leave' : 'Cancel';
   const actionBg = action === 'join' ? theme.accent : 'transparent';
   const actionColor = action === 'join' ? '#fff' : action === 'cancel' ? theme.error : theme.textSecondary;
   const actionBorder = action === 'join' ? 'none' : `1.5px solid ${action === 'cancel' ? theme.error : theme.border}`;
@@ -281,36 +281,31 @@ export function GroupDetailPanel({ group, currentUserId, onClose, onMutated }: G
       )}
 
       {action === 'cancel' && confirming && (
-        <div>
-          <p style={{ fontSize: 13, color: theme.textPrimary, marginBottom: 12 }}>
-            Cancel "{group.title}"? This can't be undone.
-          </p>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => setConfirming(false)}
-              style={{
-                flex: 1, padding: '10px 0', borderRadius: 10,
-                background: 'transparent', color: theme.textSecondary,
-                border: `1.5px solid ${theme.border}`,
-                fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              }}
-            >
-              No
-            </button>
-            <button
-              onClick={() => { setConfirming(false); void handleAction(); }}
-              disabled={loading}
-              style={{
-                flex: 1, padding: '10px 0', borderRadius: 10,
-                background: 'transparent', color: theme.error,
-                border: `1.5px solid ${theme.error}`,
-                fontSize: 13, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
-              {loading ? <Spinner size="s" /> : 'Confirm Cancel'}
-            </button>
-          </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => { setConfirming(false); void handleAction(); }}
+            disabled={loading}
+            style={{
+              flex: 1, padding: '10px 0', borderRadius: 10,
+              background: 'transparent', color: theme.error,
+              border: `1.5px solid ${theme.error}`,
+              fontSize: 13, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading ? <Spinner size="s" /> : 'Confirm Cancel'}
+          </button>
+          <button
+            onClick={() => setConfirming(false)}
+            style={{
+              flex: 1, padding: '10px 0', borderRadius: 10,
+              background: 'transparent', color: theme.textSecondary,
+              border: `1.5px solid ${theme.border}`,
+              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            No
+          </button>
         </div>
       )}
     </div>

@@ -67,6 +67,16 @@ export function BrowsePage() {
     setSelected(group);
   }
 
+  async function handleJoined(code: string) {
+    void mutate();
+    try {
+      const detail = await getGroup(code);
+      setSelected(detail);
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Failed to load joined group');
+    }
+  }
+
   // Deep-link entry: a group code passed via ?startapp= on launch is looked
   // up and shown for confirmation, same as a manual code lookup.
   useEffect(() => {
@@ -78,7 +88,6 @@ export function BrowsePage() {
         hapticFeedback.notificationOccurred('error');
         showError(e instanceof Error ? e.message : 'Failed to load invited group');
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openCount = groups?.filter((g) => g.status === 'open').length ?? 0;
@@ -98,7 +107,7 @@ export function BrowsePage() {
 
       {/* Join by code */}
       <div style={{ marginBottom: 12 }}>
-        <JoinByCodeInput onGroupFound={handleGroupFound} />
+        <JoinByCodeInput onGroupFound={handleGroupFound} onJoined={(code) => void handleJoined(code)} />
         {selected && !selectedInList && (
           <div style={{ padding: '0 16px' }}>
             <GroupDetailPanel
