@@ -3,9 +3,9 @@
  */
 
 import { useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import useSWR from 'swr';
-import { Switch, Input, Button, Spinner } from '@telegram-apps/telegram-ui';
+import { Switch, Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback } from '@tma.js/sdk-react';
 import { track } from '@vercel/analytics/react';
 
@@ -73,6 +73,21 @@ function SubscriptionRow({
   );
 }
 
+const feedbackTextareaStyle = (hasError: boolean): CSSProperties => ({
+  width: '100%',
+  minHeight: 88,
+  resize: 'vertical',
+  border: `1.5px solid ${hasError ? theme.error : theme.border}`,
+  borderRadius: 10,
+  padding: '10px 12px',
+  fontSize: 13,
+  fontFamily: 'inherit',
+  color: theme.textPrimary,
+  background: theme.cardBg,
+  outline: 'none',
+  boxSizing: 'border-box',
+});
+
 /**
  * Inline feedback form with a textarea-style input and submit button.
  *
@@ -111,30 +126,52 @@ function FeedbackPanel({ onClose }: { onClose: () => void }) {
           <p style={{ color: theme.textPrimary, textAlign: 'center', margin: '24px 0' }}>
             ✅ Thanks for your feedback!
           </p>
-          <Button mode="filled" size="l" stretched onClick={onClose}>Close</Button>
+          <button
+            onClick={onClose}
+            style={{
+              width: '100%', padding: '11px 0', borderRadius: 10,
+              border: 'none', background: theme.accent, color: '#fff',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            Close
+          </button>
         </>
       ) : (
         <>
-          <Input
+          <textarea
             placeholder="Tell us what you think… (max 1000 chars)"
             value={message}
             onChange={(e) => { setMessage(e.target.value); setError(null); }}
-            status={error ? 'error' : undefined}
-            header={error ?? undefined}
             maxLength={1000}
-            multiple
+            style={feedbackTextareaStyle(!!error)}
           />
+          {error && <p style={{ color: theme.error, fontSize: 11, marginTop: 4 }}>{error}</p>}
           <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-            <Button mode="outline" size="l" onClick={onClose}>Cancel</Button>
-            <Button
-              mode="filled"
-              size="l"
-              stretched
+            <button
+              onClick={onClose}
+              style={{
+                flex: 1, padding: '10px 0', borderRadius: 10,
+                background: 'transparent', color: theme.textSecondary,
+                border: `1.5px solid ${theme.border}`,
+                fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+            <button
               onClick={() => void handleSubmit()}
               disabled={loading || !message.trim()}
+              style={{
+                flex: 2, padding: '10px 0', borderRadius: 10,
+                border: 'none', background: theme.accent, color: '#fff',
+                fontSize: 13, fontWeight: 700,
+                cursor: loading || !message.trim() ? 'not-allowed' : 'pointer',
+                opacity: loading || !message.trim() ? 0.6 : 1,
+              }}
             >
               {loading ? <Spinner size="s" /> : 'Submit'}
-            </Button>
+            </button>
           </div>
         </>
       )}
