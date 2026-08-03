@@ -58,7 +58,7 @@ function actionButtonStyle(style: CardAction['style']): CSSProperties {
 export function GroupCard({ group, actions }: GroupCardProps) {
   const badge = statusBadge(group.status);
   const isActive = group.status === 'open' || group.status === 'full';
-  const platform = group.external_link ? platformLabel(group.external_link) : '';
+  const platform = group.externalLink ? platformLabel(group.externalLink) : '';
 
   return (
     <div
@@ -92,12 +92,12 @@ export function GroupCard({ group, actions }: GroupCardProps) {
             {group.title}
           </div>
           <div style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2 }}>
-            {formatSpots(group.current_count, group.max_members)}
-            {isActive && ` · ${formatCountdown(group.expires_at)}`}
+            {formatSpots(group.currentCount, group.maxMembers)}
+            {isActive && ` · ${formatCountdown(group.expiresAt)}`}
           </div>
-          {(group.creator_first_name || platform) && (
+          {(group.creatorFirstName || platform) && (
             <div style={{ fontSize: 11, color: theme.textMuted, marginTop: 1 }}>
-              {[group.creator_first_name && `by ${group.creator_first_name}`, platform].filter(Boolean).join(' · ')}
+              {[group.creatorFirstName && `by ${group.creatorFirstName}`, platform].filter(Boolean).join(' · ')}
             </div>
           )}
         </div>

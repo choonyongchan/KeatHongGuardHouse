@@ -64,7 +64,7 @@ function HostSettings({ group, onSaved }: HostSettingsProps) {
             key={n}
             disabled={saving !== null}
             onClick={() => void apply({ maxMembers: n }, `cap-${n}`)}
-            style={settingChipStyle(group.max_members === n)}
+            style={settingChipStyle(group.maxMembers === n)}
           >
             {saving === `cap-${n}` ? <Spinner size="s" /> : n}
           </button>
@@ -72,7 +72,7 @@ function HostSettings({ group, onSaved }: HostSettingsProps) {
         <button
           disabled={saving !== null}
           onClick={() => void apply({ maxMembers: null }, 'cap-null')}
-          style={settingChipStyle(group.max_members === null)}
+          style={settingChipStyle(group.maxMembers === null)}
         >
           {saving === 'cap-null' ? <Spinner size="s" /> : 'No Limit'}
         </button>
@@ -109,8 +109,8 @@ interface GroupDetailPanelProps {
 }
 
 function resolveAction(group: FoodGroupDetail, userId: number): 'join' | 'leave' | 'cancel' | null {
-  const isMember = group.members.some((m) => m.user_id === userId);
-  const isCreator = group.creator_id === userId;
+  const isMember = group.members.some((m) => m.userId === userId);
+  const isCreator = group.creatorId === userId;
   const isActive = group.status === 'open' || group.status === 'full';
   if (!isActive) return null;
   if (isCreator) return 'cancel';
@@ -147,10 +147,10 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
-  const [overrides, setOverrides] = useState<{ max_members?: number | null; visibility?: GroupVisibility }>({});
+  const [overrides, setOverrides] = useState<{ maxMembers?: number | null; visibility?: GroupVisibility }>({});
   const group = { ...groupProp, ...overrides };
   const action = resolveAction(group, currentUserId);
-  const isCreator = group.creator_id === currentUserId;
+  const isCreator = group.creatorId === currentUserId;
   const isActive = group.status === 'open' || group.status === 'full';
 
   async function handleAction() {
@@ -171,14 +171,14 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
   function handleSettingsSaved(patch: { maxMembers?: number | null; visibility?: GroupVisibility }) {
     setOverrides((o) => ({
       ...o,
-      ...(patch.maxMembers !== undefined ? { max_members: patch.maxMembers } : {}),
+      ...(patch.maxMembers !== undefined ? { maxMembers: patch.maxMembers } : {}),
       ...(patch.visibility !== undefined ? { visibility: patch.visibility } : {}),
     }));
     onMutated();
   }
 
-  const maxLabel = group.max_members === null ? '∞' : String(group.max_members);
-  const platform = group.external_link ? platformLabel(group.external_link) : null;
+  const maxLabel = group.maxMembers === null ? '∞' : String(group.maxMembers);
+  const platform = group.externalLink ? platformLabel(group.externalLink) : null;
   const pill = statusPill(group.status);
 
   const actionLabel = action === 'join' ? 'Join Group' : action === 'leave' ? 'Leave' : 'Cancel';
@@ -237,13 +237,13 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
       {/* Meta */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: theme.textSecondary }}>
-          <span>👤</span> Hosted by {formatMemberName(group.creator_first_name, group.creator_username)}
+          <span>👤</span> Hosted by {formatMemberName(group.creatorFirstName, group.creatorUsername)}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: theme.textSecondary }}>
-          <span>👥</span> {group.current_count}/{maxLabel} members
+          <span>👥</span> {group.currentCount}/{maxLabel} members
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: theme.textSecondary }}>
-          <span>⏳</span> Closes {formatExpiry(group.expires_at)} ({formatCountdown(group.expires_at)})
+          <span>⏳</span> Closes {formatExpiry(group.expiresAt)} ({formatCountdown(group.expiresAt)})
         </div>
       </div>
 
@@ -251,9 +251,9 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
       {isCreator && isActive && <HostSettings group={group} onSaved={handleSettingsSaved} />}
 
       {/* Order link */}
-      {group.external_link && (
+      {group.externalLink && (
         <a
-          href={group.external_link}
+          href={group.externalLink}
           target="_blank"
           rel="noreferrer"
           style={{
@@ -278,19 +278,19 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
           fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
           color: theme.textSecondary, marginBottom: 8,
         }}>
-          MEMBERS ({group.current_count}/{maxLabel})
+          MEMBERS ({group.currentCount}/{maxLabel})
         </div>
         <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${theme.border}` }}>
           {group.members.map((m, i) => (
-            <div key={m.user_id} style={{
+            <div key={m.userId} style={{
               fontSize: 13, color: theme.textPrimary,
               padding: '8px 10px',
               display: 'flex', alignItems: 'center', gap: 8,
               background: i % 2 === 0 ? theme.cardBg : theme.pageBg,
             }}>
-              <span>{m.user_id === group.creator_id ? '👑' : '·'}</span>
-              <span style={{ flex: 1, minWidth: 0 }}>{formatMemberName(m.first_name, m.username)}</span>
-              {m.user_id !== currentUserId && (
+              <span>{m.userId === group.creatorId ? '👑' : '·'}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>{formatMemberName(m.firstName, m.username)}</span>
+              {m.userId !== currentUserId && (
                 m.username ? (
                   <button
                     onClick={() => {
@@ -298,7 +298,7 @@ export function GroupDetailPanel({ group: groupProp, currentUserId, onClose, onM
                       track('Message Member', { code: group.code });
                       openUserChat(m.username!);
                     }}
-                    aria-label={`Message ${formatMemberName(m.first_name, m.username)} on Telegram`}
+                    aria-label={`Message ${formatMemberName(m.firstName, m.username)} on Telegram`}
                     style={{
                       flexShrink: 0, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: 'transparent', border: 'none', borderRadius: 6,

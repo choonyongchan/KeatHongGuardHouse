@@ -13,27 +13,27 @@ export type GroupVisibility = 'public' | 'private';
 export interface FoodGroup {
   id: number;
   code: string;
-  creator_id: number;
-  creator_first_name: string;
-  creator_username: string | null;
+  creatorId: number;
+  creatorFirstName: string;
+  creatorUsername: string | null;
   title: string;
-  external_link: string;
-  max_members: number | null;
-  current_count: number;
-  expires_at: string;
+  externalLink: string;
+  maxMembers: number | null;
+  currentCount: number;
+  expiresAt: string;
   status: GroupStatus;
   visibility: GroupVisibility;
-  expiry_warned: boolean;
-  created_at: string;
+  expiryWarned: boolean;
+  createdAt: string;
 }
 
 /** A group member as returned inside a group detail response. */
 export interface GroupMember {
-  group_id: number;
-  user_id: number;
-  first_name: string;
+  groupId: number;
+  userId: number;
+  firstName: string;
   username: string | null;
-  joined_at: string;
+  joinedAt: string;
 }
 
 /** A food group with its full member list attached. */
