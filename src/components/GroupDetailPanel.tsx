@@ -4,7 +4,7 @@ import { hapticFeedback } from '@tma.js/sdk-react';
 import type { FoodGroupDetail } from '../types.ts';
 import { formatExpiry, formatMemberName, formatCountdown } from '../lib/formatters.ts';
 import { joinGroup, leaveGroup, cancelGroup } from '../lib/api.ts';
-import { copyInviteCode, shareInvite } from '../lib/share.ts';
+import { copyInviteCode, shareInvite, openUserChat } from '../lib/share.ts';
 import { theme } from '../lib/theme.ts';
 
 interface GroupDetailPanelProps {
@@ -246,7 +246,32 @@ export function GroupDetailPanel({ group, currentUserId, onClose, onMutated }: G
               background: i % 2 === 0 ? theme.cardBg : theme.pageBg,
             }}>
               <span>{m.user_id === group.creator_id ? '👑' : '·'}</span>
-              {formatMemberName(m.first_name, m.username)}
+              <span style={{ flex: 1, minWidth: 0 }}>{formatMemberName(m.first_name, m.username)}</span>
+              {m.user_id !== currentUserId && (
+                m.username ? (
+                  <button
+                    onClick={() => {
+                      hapticFeedback.impactOccurred('light');
+                      openUserChat(m.username!);
+                    }}
+                    aria-label={`Message ${formatMemberName(m.first_name, m.username)} on Telegram`}
+                    style={{
+                      flexShrink: 0, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'transparent', border: 'none', borderRadius: 6,
+                      fontSize: 13, cursor: 'pointer', padding: 0,
+                    }}
+                  >
+                    💬
+                  </button>
+                ) : (
+                  <span
+                    aria-label="No Telegram username set"
+                    style={{ flexShrink: 0, fontSize: 10, color: theme.textSecondary, opacity: 0.6 }}
+                  >
+                    no username
+                  </span>
+                )
+              )}
             </div>
           ))}
         </div>

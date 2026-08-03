@@ -2,7 +2,7 @@
  * @fileoverview Invite link building and share/copy helpers for group codes.
  */
 
-import { shareURL } from '@tma.js/sdk-react';
+import { shareURL, openTelegramLink } from '@tma.js/sdk-react';
 
 /**
  * Base t.me deep link for the KeatHong GuardHouse Mini App. Configurable via
@@ -70,4 +70,29 @@ export async function shareInvite(code: string, title: string): Promise<'shared'
 
   await copyText(link);
   return 'copied';
+}
+
+/**
+ * Builds a t.me deep link that opens a direct chat with the given username.
+ *
+ * @param username - Member's Telegram @username (without the @).
+ */
+export function buildUserDeepLink(username: string): string {
+  return `https://t.me/${username}`;
+}
+
+/**
+ * Opens a Telegram DM with the given username, preferring Telegram's own
+ * in-app link opener so it stays inside the client rather than bouncing
+ * out to a browser.
+ *
+ * @param username - Member's Telegram @username (without the @).
+ */
+export function openUserChat(username: string): void {
+  const link = buildUserDeepLink(username);
+  if (openTelegramLink.isAvailable()) {
+    openTelegramLink(link);
+  } else {
+    window.open(link, '_blank', 'noopener');
+  }
 }
