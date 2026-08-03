@@ -100,7 +100,9 @@ async function insertGroup(
   );
 
   const firstMember = db.$with('first_member').as(
-    db.insert(groupMembers).select(db.select({ groupId: newGroup.id, userId: newGroup.creatorId }).from(newGroup)),
+    db.insert(groupMembers).select(
+      db.select({ groupId: newGroup.id, userId: newGroup.creatorId, joinedAt: sql`now()` }).from(newGroup),
+    ),
   );
 
   const [group] = await db.with(newGroup, firstMember).select().from(newGroup);
