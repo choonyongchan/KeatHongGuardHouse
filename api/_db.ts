@@ -6,7 +6,7 @@
 
 import { sql as vercelSql } from '@vercel/postgres';
 import { drizzle } from 'drizzle-orm/vercel-postgres';
-import { eq, and, inArray, lte } from 'drizzle-orm';
+import { eq, and, inArray, lte, ne } from 'drizzle-orm';
 import * as schema from './_schema.js';
 
 export const db = drizzle(vercelSql, { schema });
@@ -66,4 +66,23 @@ export async function getSubscribed(telegramId: number): Promise<boolean> {
  */
 export async function setSubscribed(telegramId: number, subscribed: boolean): Promise<void> {
   await db.update(schema.users).set({ subscribed }).where(eq(schema.users.telegramId, telegramId));
+}
+
+/**
+ * Lists Telegram IDs of all subscribed users, optionally excluding one
+ * (typically the actor triggering the notification, e.g. group creator).
+ *
+ * @param excludeId - Telegram ID to omit from the result.
+ * @returns Array of subscribed users' Telegram IDs.
+ */
+export async function listSubscribedUserIds(excludeId?: number): Promise<number[]> {
+  const rows = await db
+    .select({ telegramId: schema.users.telegramId })
+    .from(schema.users)
+    .where(
+      excludeId !== undefined
+        ? and(eq(schema.users.subscribed, true), ne(schema.users.telegramId, excludeId))
+        : eq(schema.users.subscribed, true),
+    );
+  return rows.map((r) => r.telegramId);
 }

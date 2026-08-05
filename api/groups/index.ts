@@ -4,11 +4,13 @@
  */
 
 import { sql, eq, and, inArray, getTableColumns } from 'drizzle-orm';
-import { db, expireOverdueGroups } from '../_db.js';
+import { db, expireOverdueGroups, listSubscribedUserIds } from '../_db.js';
 import { foodGroups, groupMembers, users, type GroupVisibility } from '../_schema.js';
 import { generateUniqueCode } from '../_codegen.js';
 import { parseMaxMembers, parseVisibility } from '../_validation.js';
 import { withAuth, ok, fail, ApiError, type AuthedHandler } from '../_response.js';
+import { broadcastGroupNotification } from '../_telegram.js';
+import type { TelegramUser } from '../_auth.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -134,8 +136,38 @@ const handlePost: AuthedHandler = async (req, res, user) => {
     body.visibility,
   );
 
+  if (body.visibility === 'public') {
+    try {
+      await notifySubscribers(user, group);
+    } catch (e) {
+      console.error('[groups] notify failed', e); // never fail the request over this
+    }
+  }
+
   ok(res, group);
 };
+
+/**
+ * Notifies all subscribed users (excluding the creator) that a new public
+ * group was posted.
+ *
+ * @param user - The authenticated Telegram user who created the group.
+ * @param group - The newly inserted group row.
+ */
+async function notifySubscribers(user: TelegramUser, group: typeof foodGroups.$inferSelect): Promise<void> {
+  const botToken = process.env.BOT_TOKEN;
+  if (!botToken) return; // guaranteed set by withAuth already; defensive only
+
+  const chatIds = await listSubscribedUserIds(user.id);
+  if (chatIds.length === 0) return;
+
+  await broadcastGroupNotification(botToken, chatIds, {
+    code: group.code,
+    title: group.title,
+    hostName: user.username ? `@${user.username}` : user.first_name,
+    expiresAt: new Date(group.expiresAt),
+  });
+}
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
