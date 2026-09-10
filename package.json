@@ -14,7 +14,8 @@
     "lint:fix": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
     "preview": "vite preview",
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "telegram:setup": "bun scripts/setup-telegram.ts"
   },
   "dependencies": {
     "@telegram-apps/telegram-ui": "2.1.13",
@@ -23,6 +24,7 @@
     "@vercel/postgres": "0.10.0",
     "drizzle-orm": "^0.45.2",
     "eruda": "3.4.3",
+    "grammy": "^1.46.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "react-router-dom": "7.15.0",
