@@ -1,60 +1,24 @@
 /**
- * @fileoverview Generic React error boundary component.
- * Catches unhandled errors in any child component tree and renders a fallback UI.
+ * @fileoverview Top-level error boundary: shows the error message instead of a blank screen.
  */
 
-import {
-  Component,
-  type ComponentType,
-  type GetDerivedStateFromError,
-  type PropsWithChildren,
-  type ReactNode,
-} from 'react';
+import { Component, type PropsWithChildren } from 'react';
 
-/** Props for ErrorBoundary. */
-export interface ErrorBoundaryProps extends PropsWithChildren {
-  fallback?: ReactNode | ComponentType<{ error: unknown }>;
-}
+export class ErrorBoundary extends Component<PropsWithChildren, { error?: unknown }> {
+  state: { error?: unknown } = {};
 
-/** @internal */
-interface ErrorBoundaryState {
-  error?: unknown;
-}
-
-/**
- * React class-based error boundary.
- * Accepts a `fallback` prop — either a ReactNode or a component that receives the caught error.
- * If no fallback is provided, renders nothing on error.
- */
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = {};
-
-  static getDerivedStateFromError: GetDerivedStateFromError<ErrorBoundaryProps, ErrorBoundaryState> = (error) => ({ error });
-
-  componentDidCatch(error: Error) {
-    this.setState({ error });
+  static getDerivedStateFromError(error: unknown) {
+    return { error };
   }
 
-  /**
-   * Renders children normally, or the fallback UI when an error has been caught.
-   *
-   * @returns Children, fallback component with error prop, fallback node, or null.
-   */
   render() {
-    const {
-      state: {
-        error,
-      },
-      props: {
-        fallback: Fallback,
-        children,
-      },
-    } = this;
-
-    return 'error' in this.state
-      ? typeof Fallback === 'function'
-        ? <Fallback error={error} />
-        : Fallback
-      : children;
+    if (!('error' in this.state)) return this.props.children;
+    const { error } = this.state;
+    return (
+      <div style={{ padding: 24, color: 'var(--tg-theme-destructive-text-color)' }}>
+        <p>Something went wrong:</p>
+        <code style={{ fontSize: 12 }}>{error instanceof Error ? error.message : String(error)}</code>
+      </div>
+    );
   }
 }

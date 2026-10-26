@@ -26,12 +26,16 @@ const WORD_LIST: readonly string[] = [
 ];
 
 /**
- * Picks a random word from the word list.
+ * Picks a random word plus 3 digits, e.g. `MANGO427`. Codes are unique across
+ * every group ever created, so a bare word would run out after ~150 groups.
  *
- * @returns An uppercase word suitable for use as a group code.
+ * ponytail: ~150k codes total; reuse codes of long-expired groups if that ever runs low.
+ *
+ * @returns An uppercase group code.
  */
 export function generateCode(): string {
-  return WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)]!;
+  const word = WORD_LIST[Math.floor(Math.random() * WORD_LIST.length)]!;
+  return word + String(Math.floor(Math.random() * 1000)).padStart(3, '0');
 }
 
 /**

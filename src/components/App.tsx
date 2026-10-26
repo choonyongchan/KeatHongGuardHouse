@@ -8,33 +8,17 @@ import { useLaunchParams, useSignal, hapticFeedback, miniApp } from '@tma.js/sdk
 import { AppRoot, Tabbar } from '@telegram-apps/telegram-ui';
 import { Analytics } from '@vercel/analytics/react';
 
-import { routes } from '@/navigation/routes.tsx';
+import { FeedPage } from '@/pages/FeedPage.tsx';
+import { CreatePage } from '@/pages/CreatePage.tsx';
+import { SettingsPage } from '@/pages/SettingsPage.tsx';
 import { ToastProvider } from './ToastProvider.tsx';
 
-/** localStorage key marking that the user has opened the app before. */
-const HAS_VISITED_KEY = 'kh_has_visited';
-
-/**
- * Redirects brand-new users to the Help tab on their very first launch,
- * so they see the how-to guide before anything else. Runs once per device
- * (tracked via localStorage), and only when landing on the default route.
- *
- * @returns Nothing; performs a navigation side effect.
- */
-function FirstVisitRedirect() {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (location.pathname !== '/') return;
-    if (localStorage.getItem(HAS_VISITED_KEY)) return;
-
-    localStorage.setItem(HAS_VISITED_KEY, '1');
-    void navigate('/help', { replace: true });
-  }, []);
-
-  return null;
-}
+/** Tab routes, in TabBar order. */
+const routes = [
+  { path: '/',         Component: FeedPage,     tabLabel: 'Groups',   tabIcon: '👥' },
+  { path: '/create',   Component: CreatePage,   tabLabel: 'Create',   tabIcon: '➕' },
+  { path: '/settings', Component: SettingsPage, tabLabel: 'Settings', tabIcon: '⚙️' },
+];
 
 /**
  * Bottom tab bar that highlights the active route and navigates on tap.
@@ -97,7 +81,6 @@ export function App() {
     >
       <ToastProvider>
         <HashRouter>
-          <FirstVisitRedirect />
           <Routes>
             {routes.map(({ path, Component }) => (
               <Route key={path} path={path} element={<Component />} />

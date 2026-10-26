@@ -4,172 +4,54 @@
  */
 
 import { initData } from '@tma.js/sdk-react';
-import type { FoodGroup, FoodGroupDetail, GroupVisibility, UserProfile } from '../types.ts';
-
-/** Base path — empty string so requests go to the same Vercel origin. */
-const BASE = '';
+import type { Category, Group, GroupDetail, GroupVisibility, UserProfile } from '../../shared/rules.ts';
 
 /**
- * Retrieves the raw Telegram initData string for use as an auth header.
+ * Authenticated fetch to a same-origin API route.
  *
- * @returns Raw initData string from the Telegram WebApp SDK.
- * @throws {Error} If initData is not available (app launched outside Telegram).
+ * @throws {Error} With the server's error message if the response is not OK.
  */
-function getInitData(): string {
+async function apiFetch<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const raw = initData.raw();
   if (!raw) throw new Error('Telegram initData not available');
-  return raw;
-}
 
-/**
- * Performs an authenticated fetch to a Vercel API route.
- * Attaches `x-init-data` and sets Content-Type for POST requests.
- *
- * @param path - API path (e.g. `/api/groups`).
- * @param options - Standard `RequestInit` options (method, body, etc.).
- * @returns Parsed JSON response body.
- * @throws {Error} If the HTTP response is not OK, with the server's error message.
- */
-async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const headers: Record<string, string> = {
-    'x-init-data': getInitData(),
-    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-    ...(options.headers as Record<string, string> ?? {}),
-  };
-
-  const res = await fetch(`${BASE}${path}`, { ...options, headers });
-  const text = await res.text();
-  if (!text) throw new Error(`HTTP ${res.status}: empty response from server`);
+  const res = await fetch(path, {
+    method,
+    headers: { 'x-init-data': raw, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
 
   let json: T & { error?: string };
   try {
-    json = JSON.parse(text) as T & { error?: string };
+    json = await res.json() as T & { error?: string };
   } catch {
     throw new Error(`HTTP ${res.status}: unexpected response from server`);
   }
-
-  if (!res.ok) throw new Error((json as { error: string }).error ?? `HTTP ${res.status}`);
+  if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
   return json;
 }
 
-// ── Public API ─────────────────────────────────────────────────────────────
+export const getGroups = (mine: boolean) => apiFetch<Group[]>(mine ? '/api/groups?mine=1' : '/api/groups');
 
-/**
- * Fetches all open and full groups.
- *
- * @returns Array of food groups.
- */
-export function getGroups(): Promise<FoodGroup[]> {
-  return apiFetch<FoodGroup[]>('/api/groups');
-}
+export const getGroup = (code: string) => apiFetch<GroupDetail>(`/api/groups/${code}`);
 
-/**
- * Fetches a single group with its member list.
- *
- * @param code - Uppercase group code.
- * @returns Group detail including members array.
- */
-export function getGroup(code: string): Promise<FoodGroupDetail> {
-  return apiFetch<FoodGroupDetail>(`/api/groups/${code}`);
-}
-
-/**
- * Creates a new food group.
- *
- * @param payload - Group creation fields.
- * @returns The newly created group row.
- */
-export function createGroup(payload: {
+export const createGroup = (payload: {
   title: string;
+  category: Category;
   externalLink: string;
   maxMembers: number | null;
   expiryMinutes: number;
-  visibility: GroupVisibility;
-}): Promise<FoodGroup> {
-  return apiFetch<FoodGroup>('/api/groups', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
-}
+}) => apiFetch<GroupDetail>('/api/groups', 'POST', payload);
 
-/**
- * Joins a group by code.
- *
- * @param code - Uppercase group code.
- * @returns Updated current count.
- */
-export function joinGroup(code: string): Promise<{ message: string; currentCount: number }> {
-  return apiFetch(`/api/groups/${code}/join`, { method: 'POST' });
-}
+export type GroupAction = 'join' | 'leave' | 'cancel';
 
-/**
- * Leaves a group by code.
- *
- * @param code - Uppercase group code.
- * @returns Updated current count.
- */
-export function leaveGroup(code: string): Promise<{ message: string; currentCount: number }> {
-  return apiFetch(`/api/groups/${code}/leave`, { method: 'POST' });
-}
+export const groupAction = (code: string, action: GroupAction) =>
+  apiFetch<GroupDetail>(`/api/groups/${code}`, 'POST', { action });
 
-/**
- * Updates a group's member cap and/or visibility (creator only).
- *
- * @param code - Uppercase group code.
- * @param patch - Fields to update; omitted fields are left unchanged.
- * @returns Confirmation message.
- */
-export function updateGroup(
-  code: string,
-  patch: { maxMembers?: number | null; visibility?: GroupVisibility },
-): Promise<{ message: string }> {
-  return apiFetch(`/api/groups/${code}`, {
-    method: 'PATCH',
-    body: JSON.stringify(patch),
-  });
-}
+export const updateGroup = (code: string, patch: { maxMembers?: number | null; visibility?: GroupVisibility }) =>
+  apiFetch<GroupDetail>(`/api/groups/${code}`, 'PATCH', patch);
 
-/**
- * Cancels a group by code (creator only).
- *
- * @param code - Uppercase group code.
- * @returns Confirmation message.
- */
-export function cancelGroup(code: string): Promise<{ message: string }> {
-  return apiFetch(`/api/groups/${code}/cancel`, { method: 'POST' });
-}
+export const getMe = () => apiFetch<UserProfile>('/api/users/me');
 
-/**
- * Fetches the current user's profile, created groups, and joined groups.
- *
- * @returns User profile with group lists.
- */
-export function getMe(): Promise<UserProfile> {
-  return apiFetch<UserProfile>('/api/users/me');
-}
-
-/**
- * Updates the current user's notification subscription preference.
- *
- * @param subscribed - Desired subscription state.
- * @returns The updated subscription state.
- */
-export function setSubscription(subscribed: boolean): Promise<{ subscribed: boolean }> {
-  return apiFetch('/api/users/me/subscribe', {
-    method: 'POST',
-    body: JSON.stringify({ subscribed }),
-  });
-}
-
-/**
- * Submits a feedback message.
- *
- * @param message - Feedback text (1–1000 characters).
- * @returns Confirmation message.
- */
-export function submitFeedback(message: string): Promise<{ message: string }> {
-  return apiFetch('/api/feedback', {
-    method: 'POST',
-    body: JSON.stringify({ message }),
-  });
-}
+export const setSubscriptions = (subscriptions: Category[]) =>
+  apiFetch<UserProfile>('/api/users/me', 'PATCH', { subscriptions });

@@ -56,23 +56,39 @@ export function fail(res: VercelResponse, status: number, message: string): void
   res.status(status).json({ error: message });
 }
 
+/** Postgres unique-violation code, unwrapped from drizzle's DrizzleQueryError. */
+export function isUniqueViolation(e: unknown): boolean {
+  const err = e as { code?: string; cause?: { code?: string } };
+  return err?.code === '23505' || err?.cause?.code === '23505';
+}
+
+/** Reads the `[code]` path param of a dynamic route, uppercased. */
+export function codeParam(req: VercelRequest): string {
+  const { code } = req.query;
+  if (!code || typeof code !== 'string') throw new ApiError(400, 'Missing group code');
+  return code.toUpperCase();
+}
+
 /**
- * Wraps a route handler with Telegram initData authentication and error handling.
+ * Wraps per-method route handlers with Telegram initData authentication and error handling.
  *
  * Steps performed before calling the inner handler:
- *  1. Reads the `x-init-data` request header.
- *  2. Validates the initData signature with `BOT_TOKEN`.
- *  3. Upserts the extracted Telegram user into the database.
- *  4. Invokes the inner handler with `(req, res, user)`.
+ *  1. Rejects methods not in `handlers` with 405.
+ *  2. Reads the `x-init-data` request header.
+ *  3. Validates the initData signature with `BOT_TOKEN`.
+ *  4. Upserts the extracted Telegram user into the database.
+ *  5. Invokes the method's handler with `(req, res, user)`.
  *
  * Any thrown `ApiError` is forwarded as a structured error response.
  * Unexpected errors produce a 500 response without leaking internals.
  *
- * @param handler - The authenticated route handler to wrap.
+ * @param handlers - Map of HTTP method to authenticated handler.
  * @returns A standard Vercel serverless function handler.
  */
-export function withAuth(handler: AuthedHandler) {
+export function withAuth(handlers: Partial<Record<'GET' | 'POST' | 'PATCH', AuthedHandler>>) {
   return async (req: VercelRequest, res: VercelResponse): Promise<void> => {
+    const handler = handlers[req.method as keyof typeof handlers];
+    if (!handler) return fail(res, 405, 'Method not allowed');
     try {
       const rawInitData = req.headers['x-init-data'];
       if (!rawInitData || typeof rawInitData !== 'string') {

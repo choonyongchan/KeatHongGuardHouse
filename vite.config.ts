@@ -6,7 +6,7 @@ export default defineConfig({
   base: './',
   plugins: [
     react(),
-    process.env.HTTPS && mkcert(),
+    process.env.HTTPS ? mkcert() : null,
   ],
   resolve: {
     // Native Vite 8 tsconfig paths — replaces vite-tsconfig-paths plugin.
@@ -14,7 +14,6 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
-    minify: 'terser',
   },
   server: {
     host: true,

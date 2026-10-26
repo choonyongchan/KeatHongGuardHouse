@@ -1,146 +1,86 @@
 /**
- * @fileoverview GET /api/groups/[code] — fetch a single group with its member list.
+ * @fileoverview GET   /api/groups/[code] — group + members.
  *               PATCH /api/groups/[code] — update maxMembers/visibility (creator only).
+ *               POST  /api/groups/[code] — { action: 'join' | 'leave' | 'cancel' }.
  */
 
-import type { VercelRequest } from '@vercel/node';
-import { eq, getTableColumns } from 'drizzle-orm';
-import { db } from '../../_db.js';
-import { foodGroups, groupMembers, users } from '../../_schema.js';
+import { cancelGroup, getGroup, joinGroup, leaveGroup, updateGroup } from '../../_db.js';
 import { parseMaxMembers, parseVisibility } from '../../_validation.js';
-import { withAuth, ok, fail, ApiError, type AuthedHandler } from '../../_response.js';
+import { withAuth, ok, ApiError, codeParam, isUniqueViolation } from '../../_response.js';
+import { notifyJoin } from '../../_telegram.js';
+import { isActive, type GroupDetail } from '../../../shared/rules.js';
 
-/**
- * Extracts the `code` path parameter from a Vercel dynamic route request.
- *
- * @param req - Vercel request with query params populated by file-based routing.
- * @returns Uppercase group code string.
- * @throws {ApiError} 400 if the code param is missing or not a string.
- */
-function extractCode(req: VercelRequest): string {
-  const { code } = req.query;
-  if (!code || typeof code !== 'string') throw new ApiError(400, 'Missing group code');
-  return code.toUpperCase();
-}
-
-/**
- * Fetches a food group row by its code.
- *
- * @param code - Uppercase group code.
- * @returns The group row, or null if not found.
- */
-async function fetchGroup(code: string) {
-  const rows = await db
-    .select({
-      ...getTableColumns(foodGroups),
-      creatorFirstName: users.firstName,
-      creatorUsername: users.username,
-    })
-    .from(foodGroups)
-    .innerJoin(users, eq(users.telegramId, foodGroups.creatorId))
-    .where(eq(foodGroups.code, code));
-  return rows[0] ?? null;
-}
-
-/**
- * Fetches all members of a group ordered by join time.
- *
- * @param groupId - Numeric group ID.
- * @returns Array of member rows with user details.
- */
-async function fetchMembers(groupId: number) {
-  return db
-    .select({
-      groupId: groupMembers.groupId,
-      userId: groupMembers.userId,
-      joinedAt: groupMembers.joinedAt,
-      firstName: users.firstName,
-      username: users.username,
-    })
-    .from(groupMembers)
-    .innerJoin(users, eq(users.telegramId, groupMembers.userId))
-    .where(eq(groupMembers.groupId, groupId))
-    .orderBy(groupMembers.joinedAt);
-}
-
-/**
- * Fetches the group and verifies the requesting user is the creator of an active group.
- *
- * @param code - Uppercase group code.
- * @param userId - Telegram ID of the requesting user.
- * @returns The group row if ownership and active status are confirmed.
- * @throws {ApiError} 404 if not found; 403 if not creator; 409 if not open/full.
- */
-async function assertUpdatable(code: string, userId: number) {
-  const rows = await db
-    .select({
-      id: foodGroups.id,
-      creatorId: foodGroups.creatorId,
-      status: foodGroups.status,
-      currentCount: foodGroups.currentCount,
-    })
-    .from(foodGroups)
-    .where(eq(foodGroups.code, code));
-  const group = rows[0];
+async function load(code: string, userId: number): Promise<GroupDetail> {
+  const group = await getGroup(code, userId);
   if (!group) throw new ApiError(404, 'Group not found');
-  if (group.creatorId !== userId) throw new ApiError(403, 'Only the group creator can update this group');
-  if (group.status !== 'open' && group.status !== 'full') {
-    throw new ApiError(409, 'Group is no longer open');
-  }
   return group;
 }
 
-/**
- * Validates the PATCH request body, applying the group's current values as defaults
- * for any field the caller didn't include.
- *
- * @param body - Parsed request body.
- * @param currentCount - The group's current member count, to prevent capping below it.
- * @returns Validated `maxMembers`/`visibility`.
- * @throws {ApiError} 400 if the new maxMembers is below the current member count.
- */
-function parseUpdateBody(body: Record<string, unknown>, currentCount: number) {
-  const maxMembers = 'maxMembers' in body ? parseMaxMembers(body.maxMembers) : undefined;
-  const visibility = 'visibility' in body ? parseVisibility(body.visibility) : undefined;
-
-  if (maxMembers !== null && maxMembers !== undefined && maxMembers < currentCount) {
-    throw new ApiError(400, `maxMembers cannot be set below the current member count (${currentCount})`);
+/** Friendly pre-checks; the DB statements in _db.ts are the real guard against races. */
+function assertAllowed(action: string, g: GroupDetail, userId: number): void {
+  const isCreator = g.creatorId === userId;
+  if (!isActive(g.status)) throw new ApiError(409, `Group is ${g.status}`);
+  if (action === 'join') {
+    if (g.joined) throw new ApiError(409, 'Already a member of this group');
+    if (g.status === 'full') throw new ApiError(409, 'Group is already full');
+  } else if (action === 'leave') {
+    if (isCreator) throw new ApiError(403, 'Leader cannot leave — cancel the group instead');
+    if (!g.joined) throw new ApiError(409, 'Not a member of this group');
+  } else if (action === 'cancel') {
+    if (!isCreator) throw new ApiError(403, 'Only the leader can cancel');
+  } else {
+    throw new ApiError(400, "action must be 'join', 'leave' or 'cancel'");
   }
-
-  return { maxMembers, visibility };
 }
 
-const getHandler: AuthedHandler = async (req, res) => {
-  const code = extractCode(req);
-  const group = await fetchGroup(code);
-  if (!group) throw new ApiError(404, 'Group not found');
+export default withAuth({
+  GET: async (req, res, user) => {
+    ok(res, await load(codeParam(req), user.id));
+  },
 
-  const members = await fetchMembers(group.id);
-  ok(res, { ...group, members });
-};
+  PATCH: async (req, res, user) => {
+    const g = await load(codeParam(req), user.id);
+    if (g.creatorId !== user.id) throw new ApiError(403, 'Only the leader can update this group');
+    if (!isActive(g.status)) throw new ApiError(409, 'Group is no longer open');
 
-const patchHandler: AuthedHandler = async (req, res, user) => {
-  const code = extractCode(req);
-  const group = await assertUpdatable(code, user.id);
-  const { maxMembers, visibility } = parseUpdateBody(req.body as Record<string, unknown>, group.currentCount);
+    const body = req.body as Record<string, unknown>;
+    const patch = {
+      ...('maxMembers' in body ? { maxMembers: parseMaxMembers(body.maxMembers) } : {}),
+      ...('visibility' in body ? { visibility: parseVisibility(body.visibility) } : {}),
+    };
+    if (!Object.keys(patch).length) throw new ApiError(400, 'No updatable fields provided');
+    if (patch.maxMembers != null && patch.maxMembers < g.currentCount) {
+      throw new ApiError(400, `maxMembers cannot be below the current member count (${g.currentCount})`);
+    }
 
-  if (maxMembers === undefined && visibility === undefined) {
-    throw new ApiError(400, 'No updatable fields provided');
-  }
+    await updateGroup(g.id, patch);
+    ok(res, await load(g.code, user.id));
+  },
 
-  await db
-    .update(foodGroups)
-    .set({
-      ...(maxMembers !== undefined ? { maxMembers } : {}),
-      ...(visibility !== undefined ? { visibility } : {}),
-    })
-    .where(eq(foodGroups.id, group.id));
+  POST: async (req, res, user) => {
+    const action = String((req.body as Record<string, unknown>)?.action ?? '');
+    const g = await load(codeParam(req), user.id);
+    assertAllowed(action, g, user.id);
 
-  ok(res, { message: 'Group updated' });
-};
+    if (action === 'join') {
+      let count: number | null;
+      try {
+        count = await joinGroup(g.id, user.id);
+      } catch (e) {
+        if (isUniqueViolation(e)) throw new ApiError(409, 'Already a member of this group');
+        throw e;
+      }
+      if (count === null) throw new ApiError(409, 'Group just filled up or closed');
+      const updated = await load(g.code, user.id);
+      await notifyJoin(updated, user.id);
+      return ok(res, updated);
+    }
 
-export default withAuth(async (req, res, user) => {
-  if (req.method === 'GET') return getHandler(req, res, user);
-  if (req.method === 'PATCH') return patchHandler(req, res, user);
-  fail(res, 405, 'Method not allowed');
+    if (action === 'leave') {
+      if ((await leaveGroup(g.id, user.id)) === null) throw new ApiError(409, 'Not a member of this group');
+    } else {
+      await cancelGroup(g.id);
+    }
+    ok(res, await load(g.code, user.id));
+  },
 });

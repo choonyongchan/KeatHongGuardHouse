@@ -1,37 +1,62 @@
 /**
- * @fileoverview Shared request-body field validators used by multiple group routes.
+ * @fileoverview Request-body validators. Limits come from shared/rules.ts so
+ * the client form and the server can't disagree.
  */
 
 import { ApiError } from './_response.js';
-import type { GroupVisibility } from './_schema.js';
+import {
+  CATEGORY_IDS, EXPIRY_MAX, EXPIRY_MIN, MEMBERS_MAX, MEMBERS_MIN, validateLink, validateTitle,
+  type Category, type GroupVisibility,
+} from '../shared/rules.js';
 
-/**
- * Validates a `maxMembers` field: null (no limit) or an integer between 2 and 50.
- *
- * @param value - Raw input value.
- * @returns Validated `maxMembers`.
- * @throws {ApiError} 400 if invalid.
- */
+type Body = Record<string, unknown>;
+
+/** null (no limit) or an integer within MEMBERS_MIN..MEMBERS_MAX. */
 export function parseMaxMembers(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   const n = Number(value);
-  if (!Number.isInteger(n) || n < 2 || n > 50) {
-    throw new ApiError(400, 'maxMembers must be an integer between 2 and 50, or null for no limit');
+  if (!Number.isInteger(n) || n < MEMBERS_MIN || n > MEMBERS_MAX) {
+    throw new ApiError(400, `maxMembers must be an integer between ${MEMBERS_MIN} and ${MEMBERS_MAX}, or null`);
   }
   return n;
 }
 
-/**
- * Validates a `visibility` field, defaulting to 'public' when absent.
- *
- * @param value - Raw input value.
- * @returns Validated `visibility`.
- * @throws {ApiError} 400 if invalid.
- */
+/** Defaults to 'public' when absent. */
 export function parseVisibility(value: unknown): GroupVisibility {
-  const input = value === undefined ? 'public' : String(value);
-  if (input !== 'public' && input !== 'private') {
-    throw new ApiError(400, "visibility must be 'public' or 'private'");
+  const v = value === undefined ? 'public' : String(value);
+  if (v !== 'public' && v !== 'private') throw new ApiError(400, "visibility must be 'public' or 'private'");
+  return v;
+}
+
+export function parseCategory(value: unknown): Category {
+  if (!CATEGORY_IDS.includes(value as Category)) {
+    throw new ApiError(400, `category must be one of: ${CATEGORY_IDS.join(', ')}`);
   }
-  return input;
+  return value as Category;
+}
+
+export function parseCreateBody(body: Body) {
+  const title = String(body.title ?? '').trim();
+  const externalLink = String(body.externalLink ?? '').trim();
+  const err = validateTitle(title) ?? validateLink(externalLink);
+  if (err) throw new ApiError(400, err);
+
+  const expiryMinutes = Number(body.expiryMinutes);
+  if (!Number.isInteger(expiryMinutes) || expiryMinutes < EXPIRY_MIN || expiryMinutes > EXPIRY_MAX) {
+    throw new ApiError(400, `expiryMinutes must be an integer between ${EXPIRY_MIN} and ${EXPIRY_MAX}`);
+  }
+
+  return {
+    title,
+    externalLink,
+    expiryMinutes,
+    category: parseCategory(body.category),
+    maxMembers: parseMaxMembers(body.maxMembers),
+    visibility: parseVisibility(body.visibility),
+  };
+}
+
+export function parseCategories(value: unknown): Category[] {
+  if (!Array.isArray(value)) throw new ApiError(400, 'subscriptions must be an array');
+  return [...new Set(value.map(parseCategory))];
 }

@@ -1,100 +1,81 @@
 /**
- * @fileoverview Outbound Telegram Bot API calls (sendMessage) for group
- * broadcast notifications. Uses raw fetch — no bot framework dependency.
+ * @fileoverview Outbound bot DMs (raw fetch to sendMessage). Never throws:
+ * a failed DM must never fail the request that triggered it.
  */
 
-const TELEGRAM_API_BASE = 'https://api.telegram.org';
-const SGT = 'Asia/Singapore';
+import { categoryOf, type GroupDetail } from '../shared/rules.js';
+import { formatExpiry, inviteLink, memberName } from '../shared/format.js';
 
-// Server-side equivalent of src/lib/share.ts buildInviteLink — frontend
-// `src/` code isn't importable from `api/` Vercel functions (separate build
-// target), so this small helper is intentionally duplicated here.
-const INVITE_LINK_BASE =
-  process.env.VITE_INVITE_LINK_BASE || 'https://t.me/keat_hong_guard_house_bot/app';
+const INVITE_LINK_BASE = process.env.VITE_INVITE_LINK_BASE || 'https://t.me/keat_hong_guard_house_bot/app';
 
-function buildInviteLink(code: string): string {
-  return `${INVITE_LINK_BASE}?startapp=${code}`;
-}
+type Button = { text: string; url: string };
 
-// Minimal server-side equivalent of src/lib/formatters.ts formatExpiry.
-function formatExpiry(expiresAt: Date): string {
-  return new Intl.DateTimeFormat('en-SG', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: SGT,
-  }).format(expiresAt);
-}
-
-export interface GroupNotification {
-  code: string;
-  title: string;
-  hostName: string;
-  expiresAt: Date;
-}
-
-/**
- * Sends a single Telegram DM via sendMessage with an inline "View Group"
- * button. Never throws — returns a result object so the caller can batch
- * failures without one bad chat_id aborting the rest.
- *
- * @param botToken - Bot API token.
- * @param chatId - Recipient's Telegram ID (== private-chat chat_id).
- * @param notification - Group details to render into the message.
- */
-async function sendGroupNotification(
-  botToken: string,
-  chatId: number,
-  notification: GroupNotification,
-): Promise<{ chatId: number; ok: boolean; error?: string }> {
-  const { code, title, hostName, expiresAt } = notification;
-  const text = `New group: ${title}\nHost: ${hostName}\nExpires ${formatExpiry(expiresAt)}`;
-
+async function sendMessage(chatId: number, text: string, buttons: Button[]): Promise<void> {
+  const token = process.env.BOT_TOKEN;
+  if (!token) return;
   try {
-    const res = await fetch(`${TELEGRAM_API_BASE}/bot${botToken}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
         text,
-        reply_markup: {
-          inline_keyboard: [[{ text: 'View Group', url: buildInviteLink(code) }]],
-        },
+        reply_markup: { inline_keyboard: buttons.map((b) => [b]) },
       }),
     });
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      return { chatId, ok: false, error: `${res.status} ${body}` };
-    }
-    return { chatId, ok: true };
+    if (!res.ok) console.warn(`[telegram] DM to ${chatId} failed: ${res.status} ${await res.text().catch(() => '')}`);
   } catch (e) {
-    return { chatId, ok: false, error: e instanceof Error ? e.message : String(e) };
+    console.warn(`[telegram] DM to ${chatId} threw`, e);
   }
 }
 
+// ponytail: fires all DMs at once; Telegram caps ~30 msg/s, so batch with a
+// delay (or a queue) once a category has more than ~30 subscribers.
+function sendAll(chatIds: number[], text: string, buttons: Button[]): Promise<unknown> {
+  return Promise.all(chatIds.map((id) => sendMessage(id, text, buttons)));
+}
+
+const viewButton = (code: string): Button => ({ text: 'View group', url: inviteLink(INVITE_LINK_BASE, code) });
+
+/** t.me link if the user has a username; tg://user otherwise (works inside Telegram clients). */
+function chatButton(text: string, userId: number, username: string | null): Button {
+  return { text, url: username ? `https://t.me/${username}` : `tg://user?id=${userId}` };
+}
+
+function slots(g: GroupDetail): string {
+  return g.maxMembers === null ? `${g.currentCount} joined` : `${g.currentCount}/${g.maxMembers}`;
+}
+
+export function notifyNewGroup(chatIds: number[], g: GroupDetail): Promise<unknown> {
+  const c = categoryOf(g.category);
+  const text = `${c.emoji} New ${c.label} group: ${g.title}\n`
+    + `Leader: ${memberName(g.creatorFirstName, g.creatorUsername)}\n`
+    + `Closes ${formatExpiry(g.expiresAt)}`;
+  return sendAll(chatIds, text, [viewButton(g.code)]);
+}
+
 /**
- * Broadcasts a new-group notification to many recipients in parallel,
- * isolating per-recipient failures (e.g. 403 blocked bot) via
- * Promise.allSettled so one bad chat_id never affects the others.
- *
- * @param botToken - Bot API token.
- * @param chatIds - Recipient Telegram IDs.
- * @param notification - Group details to render into the message.
+ * Sent on every join (the group has ≥ 2 people from the first join on):
+ * the joiner is pointed at the leader, the leader learns who joined.
  */
-export async function broadcastGroupNotification(
-  botToken: string,
-  chatIds: number[],
-  notification: GroupNotification,
-): Promise<void> {
-  if (chatIds.length === 0) return;
-  const results = await Promise.allSettled(
-    chatIds.map((chatId) => sendGroupNotification(botToken, chatId, notification)),
-  );
-  for (const r of results) {
-    if (r.status === 'fulfilled' && !r.value.ok) {
-      console.warn(`[telegram] notify failed for ${r.value.chatId}: ${r.value.error}`);
-    } else if (r.status === 'rejected') {
-      console.warn('[telegram] notify threw unexpectedly', r.reason);
-    }
-  }
+export function notifyJoin(g: GroupDetail, joinerId: number): Promise<unknown> {
+  const joiner = g.members.find((m) => m.userId === joinerId);
+  if (!joiner) return Promise.resolve();
+  const leader = memberName(g.creatorFirstName, g.creatorUsername);
+  const full = g.status === 'full' ? '\nThe group is now full.' : '';
+  // In the text, not a button: a malformed URL in a button makes Telegram reject the whole message.
+  const link = g.externalLink ? `\nLink: ${g.externalLink}` : '';
+
+  return Promise.all([
+    sendMessage(
+      joinerId,
+      `✅ You joined "${g.title}" (${slots(g)}).\nYour leader is ${leader}. Message them to coordinate.${link}${full}`,
+      [chatButton(`Message ${leader}`, g.creatorId, g.creatorUsername), viewButton(g.code)],
+    ),
+    sendMessage(
+      g.creatorId,
+      `👋 ${memberName(joiner.firstName, joiner.username)} joined "${g.title}" (${slots(g)}).${full}`,
+      [chatButton(`Message ${memberName(joiner.firstName, joiner.username)}`, joiner.userId, joiner.username), viewButton(g.code)],
+    ),
+  ]);
 }

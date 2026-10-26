@@ -1,100 +1,66 @@
 import { useState } from 'react';
 import { track } from '@vercel/analytics/react';
 import { hapticFeedback } from '@tma.js/sdk-react';
-import { copyInviteCode, shareInvite } from '../lib/share.ts';
+import { shareInvite } from '../lib/share.ts';
 import { theme } from '../lib/theme.ts';
 
 interface ShareCodeBlockProps {
   code: string;
   title: string;
-  shareLabel?: string;
-  caption?: string;
   marginBottom?: number;
-  codeFontSize?: number;
 }
 
-export function ShareCodeBlock({
-  code, title, shareLabel = 'Share', caption, marginBottom = 0, codeFontSize = 28,
-}: ShareCodeBlockProps) {
-  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+export function ShareCodeBlock({ code, title, marginBottom = 0 }: ShareCodeBlockProps) {
+  const [feedback, setFeedback] = useState<string | null>(null);
 
-  function flashCopyFeedback(message: string) {
-    setCopyFeedback(message);
-    setTimeout(() => setCopyFeedback(null), 2000);
+  function flash(message: string) {
+    setFeedback(message);
+    setTimeout(() => setFeedback(null), 2000);
   }
 
-  async function handleCopyCode() {
+  async function handle(kind: 'copy' | 'share') {
     hapticFeedback.impactOccurred('light');
-    track('Copy Group Code', { code });
+    track(kind === 'copy' ? 'Copy Group Code' : 'Share Group Link', { code });
     try {
-      await copyInviteCode(code);
-      flashCopyFeedback('Code copied!');
+      if (kind === 'copy') {
+        await navigator.clipboard.writeText(code);
+        flash('Code copied!');
+      } else if ((await shareInvite(code, title)) === 'copied') {
+        flash('Link copied!');
+      }
     } catch {
-      flashCopyFeedback('Could not copy');
+      flash(kind === 'copy' ? 'Could not copy' : 'Could not share');
     }
   }
 
-  async function handleShare() {
-    hapticFeedback.impactOccurred('light');
-    track('Share Group Link', { code });
-    try {
-      const result = await shareInvite(code, title);
-      if (result === 'copied') flashCopyFeedback('Link copied!');
-    } catch {
-      flashCopyFeedback('Could not share');
-    }
-  }
+  const button = { flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer' };
 
   return (
     <div style={{
-      background: theme.accentLight,
-      border: `1.5px solid ${theme.accentBorder}`,
-      borderRadius: 12,
-      padding: '14px 16px',
-      marginBottom,
-      textAlign: 'center',
+      background: theme.accentLight, border: `1.5px solid ${theme.accentBorder}`,
+      borderRadius: 12, padding: '12px 14px', marginBottom, textAlign: 'center',
     }}>
-      {caption && (
-        <div style={{ fontSize: 12, color: theme.textSecondary, marginBottom: 10, lineHeight: 1.5 }}>
-          {caption}
-        </div>
-      )}
       <div style={{
-        fontSize: codeFontSize, fontWeight: 800, letterSpacing: 3,
-        color: theme.textPrimary, fontFamily: 'monospace',
-        marginBottom: 12, wordBreak: 'break-all',
+        fontSize: 24, fontWeight: 800, letterSpacing: 3, color: theme.textPrimary,
+        fontFamily: 'monospace', marginBottom: 10, wordBreak: 'break-all',
       }}>
         {code}
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <button
-          onClick={() => void handleCopyCode()}
-          style={{
-            flex: 1, padding: '10px 0', borderRadius: 10,
-            background: theme.cardBg, color: theme.textPrimary,
-            border: `1.5px solid ${theme.accentBorder}`,
-            fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          }}
+          onClick={() => void handle('copy')}
+          style={{ ...button, background: theme.cardBg, color: theme.textPrimary, border: `1.5px solid ${theme.accentBorder}` }}
         >
           📋 Copy
         </button>
         <button
-          onClick={() => void handleShare()}
-          style={{
-            flex: 1, padding: '10px 0', borderRadius: 10,
-            background: theme.accent, color: '#fff',
-            border: 'none',
-            fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          }}
+          onClick={() => void handle('share')}
+          style={{ ...button, background: theme.accent, color: '#fff', border: 'none' }}
         >
-          ↗ {shareLabel}
+          ↗ Share
         </button>
       </div>
-      {copyFeedback && (
-        <div style={{ fontSize: 11, fontWeight: 700, color: theme.accent, marginTop: 8 }}>
-          {copyFeedback}
-        </div>
-      )}
+      {feedback && <div style={{ fontSize: 11, fontWeight: 700, color: theme.accent, marginTop: 8 }}>{feedback}</div>}
     </div>
   );
 }
