@@ -74,13 +74,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             onClick={() => dismiss(t.id)}
             style={{
               background: theme.errorLight,
-              border: `1px solid ${theme.errorBorder}`,
+              border: `1px solid ${theme.border}`,
               color: theme.error,
-              borderRadius: 10,
-              padding: '10px 14px',
-              fontSize: 13,
-              fontWeight: 600,
-              boxShadow: theme.shadow,
+              borderRadius: 18,
+              padding: '12px 16px',
+              fontSize: 14,
               pointerEvents: 'auto',
               cursor: 'pointer',
             }}

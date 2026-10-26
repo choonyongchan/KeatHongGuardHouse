@@ -53,5 +53,5 @@ export const updateGroup = (code: string, patch: { maxMembers?: number | null; v
 
 export const getMe = () => apiFetch<UserProfile>('/api/users/me');
 
-export const setSubscriptions = (subscriptions: Category[]) =>
-  apiFetch<UserProfile>('/api/users/me', 'PATCH', { subscriptions });
+export const updateMe = (patch: { notify?: boolean; subscriptions?: Category[] }) =>
+  apiFetch<UserProfile>('/api/users/me', 'PATCH', patch);

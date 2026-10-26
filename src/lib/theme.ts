@@ -1,35 +1,67 @@
-// src/lib/theme.ts
+// src/lib/theme.ts — style helpers over the CSS tokens in index.css (see DESIGN.md).
 import type { CSSProperties } from 'react';
 import type { GroupStatus } from '../../shared/rules.ts';
 
 export const theme = {
   accent: 'var(--app-accent)',
+  accentFocus: 'var(--app-accent-focus)',
   accentLight: 'var(--app-accent-light)',
-  accentBorder: 'var(--app-accent-border)',
   error: 'var(--app-error)',
   errorLight: 'var(--app-error-light)',
-  errorBorder: 'var(--app-error-border)',
   textPrimary: 'var(--app-text-primary)',
   textSecondary: 'var(--app-text-secondary)',
   textMuted: 'var(--app-text-muted)',
   cardBg: 'var(--app-card-bg)',
   pageBg: 'var(--app-page-bg)',
   border: 'var(--app-border)',
-  shadow: 'var(--app-shadow)',
   badgeBg: 'var(--app-badge-bg)',
-  warningBg: 'var(--app-warning-bg)',
-  warningText: 'var(--app-warning-text)',
+  /** Height of the bottom tab bar, safe area included. */
+  dockHeight: 'var(--app-dock-h)',
+  /** Side padding that also centres content in a max-width column on wide screens. */
+  gutter: 'var(--app-gutter)',
 } as const;
+
+/** Page shell. `bottom` reserves room for fixed bars stacked above the tab bar. */
+export function pageStyle(bottom = 0): CSSProperties {
+  return {
+    maxWidth: 'var(--app-max-w)', margin: '0 auto',
+    padding: `env(safe-area-inset-top) 16px calc(${theme.dockHeight} + ${bottom + 24}px)`,
+  };
+}
+
+/** One UI viewing area: a large title with air above it, in the top part of the screen. */
+export const headerStyle: CSSProperties = { padding: 'clamp(24px, 9vh, 88px) 4px 24px' };
+export const titleStyle: CSSProperties = {
+  margin: 0, fontSize: 'clamp(28px, 8vw, 40px)', fontWeight: 600, lineHeight: 1.1, letterSpacing: -0.374, color: theme.textPrimary,
+};
+export const subtitleStyle: CSSProperties = { margin: '8px 0 0', fontSize: 17, color: theme.textSecondary };
+
+/** One UI interaction area: a frosted bar pinned just above the tab bar. */
+export const bottomBarStyle: CSSProperties = {
+  position: 'fixed', left: 0, right: 0, bottom: theme.dockHeight, zIndex: 90,
+  padding: `12px ${theme.gutter}`, background: 'var(--app-frosted)',
+  backdropFilter: 'saturate(180%) blur(20px)', WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+  borderTop: `1px solid ${theme.border}`,
+};
+
+/** Card list: one column on phones, two on tablets. */
+export const gridStyle: CSSProperties = {
+  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: 12,
+};
+
+export const cardStyle: CSSProperties = {
+  background: theme.cardBg, borderRadius: 18, border: `1px solid ${theme.border}`,
+};
 
 export function chipStyle(selected: boolean): CSSProperties {
   return {
-    padding: '6px 12px',
-    borderRadius: 20,
-    border: selected ? `2px solid ${theme.accent}` : `1.5px solid ${theme.border}`,
-    background: selected ? theme.accentLight : 'transparent',
-    color: selected ? theme.accent : theme.textSecondary,
-    fontWeight: 600,
-    fontSize: 13,
+    padding: selected ? '9px 15px' : '10px 16px',
+    borderRadius: 9999,
+    border: selected ? `2px solid ${theme.accentFocus}` : `1px solid ${theme.border}`,
+    background: theme.cardBg,
+    color: selected ? theme.accent : theme.textPrimary,
+    fontWeight: selected ? 600 : 400,
+    fontSize: 14,
     cursor: 'pointer',
     whiteSpace: 'nowrap',
   };
@@ -38,24 +70,25 @@ export function chipStyle(selected: boolean): CSSProperties {
 export function buttonStyle(kind: 'primary' | 'outline' | 'danger', disabled = false): CSSProperties {
   const base: CSSProperties = {
     width: '100%',
-    padding: '11px 0',
-    borderRadius: 10,
-    fontSize: 14,
-    fontWeight: 700,
+    minHeight: 44,
+    padding: '11px 22px',
+    borderRadius: 9999,
+    fontSize: 17,
+    fontWeight: 400,
     cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.6 : 1,
+    opacity: disabled ? 0.5 : 1,
   };
   if (kind === 'primary') return { ...base, background: theme.accent, color: '#fff', border: 'none' };
-  if (kind === 'danger') return { ...base, background: 'transparent', color: theme.error, border: `1.5px solid ${theme.error}` };
-  return { ...base, background: 'transparent', color: theme.textSecondary, border: `1.5px solid ${theme.border}` };
+  if (kind === 'danger') return { ...base, background: 'transparent', color: theme.error, border: `1px solid ${theme.error}` };
+  return { ...base, background: 'transparent', color: theme.accent, border: `1px solid ${theme.accent}` };
 }
 
 export const sectionLabelStyle: CSSProperties = {
-  fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: theme.textSecondary, marginBottom: 8,
+  fontSize: 14, fontWeight: 600, letterSpacing: -0.224, color: theme.textSecondary, margin: '0 4px 8px',
 };
 
+/** Single accent: open is blue, everything else neutral. */
 export function statusBadge(status: GroupStatus): { label: string; bg: string; color: string } {
-  if (status === 'open') return { label: 'OPEN', bg: theme.accentLight, color: theme.accent };
-  if (status === 'full') return { label: 'FULL', bg: theme.warningBg, color: theme.warningText };
-  return { label: status.toUpperCase(), bg: theme.badgeBg, color: theme.textMuted };
+  if (status === 'open') return { label: 'Open', bg: theme.accentLight, color: theme.accent };
+  return { label: status[0].toUpperCase() + status.slice(1), bg: theme.badgeBg, color: theme.textSecondary };
 }

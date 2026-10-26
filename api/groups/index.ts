@@ -7,6 +7,7 @@ import { getGroup, insertGroup, isCodeTaken, listMyGroups, listPublicGroups, lis
 import { generateUniqueCode } from '../_codegen.js';
 import { parseCreateBody } from '../_validation.js';
 import { withAuth, ok } from '../_response.js';
+import { waitUntil } from '@vercel/functions';
 import { notifyNewGroup } from '../_telegram.js';
 
 export default withAuth({
@@ -21,8 +22,10 @@ export default withAuth({
     const group = (await getGroup(code, user.id))!;
 
     if (group.visibility === 'public') {
-      // ponytail: awaited so the function isn't frozen mid-send; move to waitUntil if create feels slow.
-      await notifyNewGroup(await listSubscriberIds(group.category, user.id), group);
+      // Background: respond now, keep the function alive until every DM is sent.
+      waitUntil(listSubscriberIds(group.category, user.id)
+        .then((ids) => notifyNewGroup(ids, group))
+        .catch((e) => console.warn('[telegram] new-group DMs failed', e)));
     }
     ok(res, group);
   },

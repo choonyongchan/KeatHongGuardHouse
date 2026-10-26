@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { Spinner } from '@telegram-apps/telegram-ui';
+import { hapticFeedback } from '@tma.js/sdk-react';
+import { track } from '@vercel/analytics/react';
 import { MEMBER_PRESETS, categoryOf, isActive, type GroupDetail } from '../../shared/rules.ts';
 import { formatExpiry, formatTimeLeft, memberName, platformLabel } from '../../shared/format.ts';
 import { groupAction, updateGroup, type GroupAction } from '../lib/api.ts';
-import { openUserChat } from '../lib/share.ts';
+import { openUserChat, shareInvite } from '../lib/share.ts';
 import { useRun } from '../lib/useRun.ts';
-import { ShareCodeBlock } from './ShareCodeBlock.tsx';
-import { buttonStyle, chipStyle, sectionLabelStyle, statusBadge, theme } from '../lib/theme.ts';
+import { buttonStyle, cardStyle, chipStyle, sectionLabelStyle, statusBadge, theme } from '../lib/theme.ts';
 
 interface GroupDetailPanelProps {
   group: GroupDetail;
   currentUserId: number;
-  onClose: () => void;
   /** Called after any successful change, so lists can revalidate. */
   onChanged: () => void;
+  /** Where the sticky action bar rests: 0 inside a sheet, above the tab bar on a page. */
+  footerBottom?: string;
 }
 
 function primaryAction(g: GroupDetail, userId: number): GroupAction | null {
@@ -25,16 +27,22 @@ function primaryAction(g: GroupDetail, userId: number): GroupAction | null {
 
 const ACTION_LABEL: Record<GroupAction, string> = { join: 'Join group', leave: 'Leave', cancel: 'Cancel group' };
 
-export function GroupDetailPanel({ group: initial, currentUserId, onClose, onChanged }: GroupDetailPanelProps) {
+const rowStyle = { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' } as const;
+
+/**
+ * Group details, laid out One UI style: information on top (title, status, leader,
+ * members), controls at the bottom (leader settings, then a sticky share/action bar).
+ */
+export function GroupDetailPanel({ group: initial, currentUserId, onChanged, footerBottom = '0px' }: GroupDetailPanelProps) {
   const [group, setGroup] = useState(initial);
   const [confirming, setConfirming] = useState(false);
+  const [flash, setFlash] = useState<string | null>(null);
   const { run, busy } = useRun();
 
   const isLeader = group.creatorId === currentUserId;
   const active = isActive(group.status);
   const action = primaryAction(group, currentUserId);
   const badge = statusBadge(group.status);
-  const leaderName = memberName(group.creatorFirstName, group.creatorUsername);
   const countLabel = group.maxMembers === null ? `${group.currentCount}` : `${group.currentCount}/${group.maxMembers}`;
 
   async function apply(key: string, fn: () => Promise<GroupDetail>, event?: string) {
@@ -52,85 +60,137 @@ export function GroupDetailPanel({ group: initial, currentUserId, onClose, onCha
     void apply('action', () => groupAction(group.code, action), `${action} group`);
   }
 
+  function showFlash(message: string) {
+    setFlash(message);
+    setTimeout(() => setFlash(null), 2000);
+  }
+
+  async function copyCode() {
+    hapticFeedback.impactOccurred('light');
+    track('Copy Group Code', { code: group.code });
+    try {
+      await navigator.clipboard.writeText(group.code);
+      showFlash('Code copied');
+    } catch {
+      showFlash('Could not copy');
+    }
+  }
+
+  async function share() {
+    hapticFeedback.impactOccurred('light');
+    track('Share Group Link', { code: group.code });
+    try {
+      if ((await shareInvite(group.code, group.title)) === 'copied') showFlash('Link copied');
+    } catch {
+      showFlash('Could not share');
+    }
+  }
+
+  const primary = action && (
+    <button
+      onClick={handleAction}
+      disabled={busy !== null}
+      style={buttonStyle(action === 'join' ? 'primary' : action === 'cancel' ? 'danger' : 'outline', busy !== null)}
+    >
+      {busy === 'action' ? <Spinner size="s" /> : confirming ? 'Confirm cancel' : ACTION_LABEL[action]}
+    </button>
+  );
+
   return (
-    <div style={{ background: theme.cardBg, borderRadius: 14, marginBottom: 8, padding: '14px 14px 16px', boxShadow: theme.shadow }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 14 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 16, fontWeight: 800, color: theme.textPrimary, marginBottom: 6, wordBreak: 'break-word' }}>
-            {categoryOf(group.category).emoji} {group.title}
-          </div>
-          <span style={{
-            display: 'inline-block', fontSize: 10, fontWeight: 700, letterSpacing: 0.4,
-            padding: '3px 8px', borderRadius: 999, background: badge.bg, color: badge.color,
-          }}>
+    <div>
+      {/* ── Information ── */}
+      <div style={{ padding: '8px 4px 24px' }}>
+        <div style={{ fontSize: 40, lineHeight: 1, marginBottom: 12 }}>{categoryOf(group.category).emoji}</div>
+        <h2 style={{
+          margin: '0 0 8px', fontSize: 28, fontWeight: 600, lineHeight: 1.14, letterSpacing: -0.28,
+          color: theme.textPrimary, wordBreak: 'break-word',
+        }}>
+          {group.title}
+        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 14, color: theme.textSecondary }}>
+          <span style={{ padding: '2px 10px', borderRadius: 9999, background: badge.bg, color: badge.color, fontWeight: 600 }}>
             {badge.label}
           </span>
+          <span>{countLabel} joined</span>
+          {active && <span>· {formatTimeLeft(group.expiresAt)} left</span>}
         </div>
-        <button
-          onClick={onClose}
-          aria-label="Collapse details"
-          style={{
-            width: 28, height: 28, background: theme.pageBg, border: `1px solid ${theme.border}`,
-            borderRadius: 8, color: theme.textSecondary, fontSize: 13, cursor: 'pointer',
-          }}
-        >
-          ▲
-        </button>
       </div>
 
-      {/* Leader: the person everyone coordinates with */}
-      {!isLeader && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, padding: '10px 12px',
-          border: `1.5px solid ${theme.accentBorder}`, background: theme.accentLight, borderRadius: 10,
-        }}>
+      <div style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
+        <div style={rowStyle}>
           <span style={{ fontSize: 20 }}>👑</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: theme.textPrimary }}>{leaderName}</div>
-            <div style={{ fontSize: 11, color: theme.textSecondary }}>Group leader — message them to coordinate</div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: theme.textPrimary }}>
+              {memberName(group.creatorFirstName, group.creatorUsername)}{isLeader && ' (you)'}
+            </div>
+            <div style={{ fontSize: 14, color: theme.textSecondary }}>
+              {isLeader ? "You're the leader" : 'Leader — message them to coordinate'}
+            </div>
           </div>
-          {group.creatorUsername ? (
+          {!isLeader && group.creatorUsername && (
             <button
               onClick={() => openUserChat(group.creatorUsername!)}
-              style={{ ...buttonStyle('primary'), width: 'auto', padding: '8px 12px', fontSize: 12 }}
+              style={{ ...buttonStyle('primary'), width: 'auto', minHeight: 36, padding: '6px 16px', fontSize: 14 }}
             >
-              💬 Message
+              Message
             </button>
-          ) : (
-            <span style={{ fontSize: 10, color: theme.textMuted }}>no username</span>
           )}
         </div>
-      )}
-
-      <ShareCodeBlock code={group.code} title={group.title} marginBottom={14} />
-
-      {/* Meta */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14, fontSize: 12, color: theme.textSecondary }}>
-        <div>👥 {countLabel} joined</div>
-        <div>⏳ Closes {formatExpiry(group.expiresAt)} ({formatTimeLeft(group.expiresAt)})</div>
+        <div style={{ ...rowStyle, borderTop: `1px solid ${theme.border}`, fontSize: 14, color: theme.textSecondary }}>
+          <span style={{ flex: 1 }}>Closes {formatExpiry(group.expiresAt)}</span>
+          <button
+            onClick={() => void copyCode()}
+            aria-label="Copy group code"
+            style={{
+              background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+              fontFamily: 'ui-monospace, monospace', fontSize: 14, fontWeight: 600, letterSpacing: 1, color: theme.accent,
+            }}
+          >
+            {group.code}
+          </button>
+        </div>
+        {group.externalLink && (
+          <a
+            href={group.externalLink}
+            target="_blank"
+            rel="noreferrer"
+            style={{ ...rowStyle, borderTop: `1px solid ${theme.border}`, color: theme.accent, fontSize: 17, textDecoration: 'none' }}
+          >
+            <span style={{ flex: 1 }}>Open {platformLabel(group.externalLink)}</span>
+            <span aria-hidden>›</span>
+          </a>
+        )}
       </div>
 
-      {group.externalLink && (
-        <a
-          href={group.externalLink}
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            display: 'block', marginBottom: 14, padding: '10px 14px', border: `1.5px solid ${theme.border}`,
-            borderRadius: 10, color: theme.accent, fontSize: 13, fontWeight: 600, textDecoration: 'none',
-          }}
-        >
-          Open {platformLabel(group.externalLink)} →
-        </a>
-      )}
+      <div style={sectionLabelStyle}>Members ({countLabel})</div>
+      <div style={{ ...cardStyle, marginBottom: 24, overflow: 'hidden' }}>
+        {group.members.map((m, i) => {
+          const name = memberName(m.firstName, m.username);
+          const canMessage = m.userId !== currentUserId && !!m.username;
+          return (
+            <div
+              key={m.userId}
+              onClick={canMessage ? () => openUserChat(m.username!) : undefined}
+              role={canMessage ? 'button' : undefined}
+              aria-label={canMessage ? `Message ${name} on Telegram` : undefined}
+              style={{
+                ...rowStyle, fontSize: 17, color: theme.textPrimary,
+                borderTop: i ? `1px solid ${theme.border}` : 'none', cursor: canMessage ? 'pointer' : 'default',
+              }}
+            >
+              <span style={{ width: 20, textAlign: 'center' }}>{m.userId === group.creatorId ? '👑' : '·'}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>{name}{m.userId === currentUserId && ' (you)'}</span>
+              {canMessage && <span style={{ color: theme.accent, fontSize: 14 }}>Message ›</span>}
+            </div>
+          );
+        })}
+      </div>
 
-      {/* Leader settings */}
+      {/* ── Controls ── */}
       {isLeader && active && (
-        <div style={{ marginBottom: 14 }}>
-          <div style={sectionLabelStyle}>GROUP SETTINGS</div>
-          <div style={{ fontSize: 12, color: theme.textSecondary, marginBottom: 6 }}>Member cap</div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div style={{ marginBottom: 24 }}>
+          <div style={sectionLabelStyle}>Member cap</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
             {MEMBER_PRESETS.map((n) => (
               <button
                 key={String(n)}
@@ -142,8 +202,8 @@ export function GroupDetailPanel({ group: initial, currentUserId, onClose, onCha
               </button>
             ))}
           </div>
-          <div style={{ fontSize: 12, color: theme.textSecondary, marginBottom: 6 }}>Who can find this group?</div>
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div style={sectionLabelStyle}>Who can find this group?</div>
+          <div style={{ display: 'flex', gap: 8 }}>
             {(['public', 'private'] as const).map((v) => (
               <button
                 key={v}
@@ -158,50 +218,20 @@ export function GroupDetailPanel({ group: initial, currentUserId, onClose, onCha
         </div>
       )}
 
-      {/* Members */}
-      <div style={{ marginBottom: 14 }}>
-        <div style={sectionLabelStyle}>MEMBERS ({countLabel})</div>
-        <div style={{ borderRadius: 10, overflow: 'hidden', border: `1px solid ${theme.border}` }}>
-          {group.members.map((m, i) => {
-            const name = memberName(m.firstName, m.username);
-            const canMessage = m.userId !== currentUserId && !!m.username;
-            return (
-              <div
-                key={m.userId}
-                onClick={canMessage ? () => openUserChat(m.username!) : undefined}
-                role={canMessage ? 'button' : undefined}
-                aria-label={canMessage ? `Message ${name} on Telegram` : undefined}
-                style={{
-                  fontSize: 13, color: theme.textPrimary, padding: '8px 10px',
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  background: i % 2 === 0 ? theme.cardBg : theme.pageBg,
-                  cursor: canMessage ? 'pointer' : 'default',
-                }}
-              >
-                <span>{m.userId === group.creatorId ? '👑' : '·'}</span>
-                <span style={{ flex: 1, minWidth: 0 }}>{name}{m.userId === currentUserId && ' (you)'}</span>
-                {canMessage && <span>💬</span>}
-              </div>
-            );
-          })}
+      <div style={{
+        position: 'sticky', bottom: footerBottom, padding: '12px 0 16px',
+        background: theme.pageBg, borderTop: `1px solid ${theme.border}`,
+      }}>
+        {flash && <div style={{ textAlign: 'center', fontSize: 14, color: theme.accent, marginBottom: 8 }}>{flash}</div>}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {confirming ? (
+            <button onClick={() => setConfirming(false)} style={buttonStyle('outline')}>Keep it</button>
+          ) : (
+            <button onClick={() => void share()} style={buttonStyle(action === 'join' ? 'outline' : 'primary')}>Share</button>
+          )}
+          {primary}
         </div>
       </div>
-
-      {/* Primary action, with inline confirm for cancel */}
-      {action && (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={handleAction}
-            disabled={busy !== null}
-            style={buttonStyle(action === 'join' ? 'primary' : action === 'cancel' ? 'danger' : 'outline', busy !== null)}
-          >
-            {busy === 'action' ? <Spinner size="s" /> : confirming ? 'Confirm cancel' : ACTION_LABEL[action]}
-          </button>
-          {confirming && (
-            <button onClick={() => setConfirming(false)} style={buttonStyle('outline')}>Keep it</button>
-          )}
-        </div>
-      )}
     </div>
   );
 }

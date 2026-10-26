@@ -72,6 +72,9 @@ export interface UserProfile {
   id: number;
   firstName: string;
   username: string | null;
+  /** Master switch for new-group DMs (default on). */
+  notify: boolean;
+  /** Categories to be told about (default all). */
   subscriptions: Category[];
 }
 

@@ -29,10 +29,15 @@ async function sendMessage(chatId: number, text: string, buttons: Button[]): Pro
   }
 }
 
-// ponytail: fires all DMs at once; Telegram caps ~30 msg/s, so batch with a
-// delay (or a queue) once a category has more than ~30 subscribers.
-function sendAll(chatIds: number[], text: string, buttons: Button[]): Promise<unknown> {
-  return Promise.all(chatIds.map((id) => sendMessage(id, text, buttons)));
+const BATCH = 25; // Telegram allows ~30 msg/s per bot; stay under it.
+
+// Runs inside waitUntil, so pacing doesn't slow the response.
+// ponytail: 25 msg/s fits ~7,500 recipients in a 300s function; move to a queue past that.
+async function sendAll(chatIds: number[], text: string, buttons: Button[]): Promise<void> {
+  for (let i = 0; i < chatIds.length; i += BATCH) {
+    if (i) await new Promise((r) => setTimeout(r, 1000));
+    await Promise.all(chatIds.slice(i, i + BATCH).map((id) => sendMessage(id, text, buttons)));
+  }
 }
 
 const viewButton = (code: string): Button => ({ text: 'View group', url: inviteLink(INVITE_LINK_BASE, code) });

@@ -6,11 +6,11 @@
 
 import { sql as vercelSql } from '@vercel/postgres';
 import { drizzle } from 'drizzle-orm/vercel-postgres';
-import { and, eq, getTableColumns, gt, ne, sql } from 'drizzle-orm';
-import { groups, groupMembers, subscriptions, users } from './_schema.js';
-import { statusOf, type Category, type Group, type GroupDetail, type GroupVisibility } from '../shared/rules.js';
+import { and, eq, getTableColumns, gt, ne, notExists, sql } from 'drizzle-orm';
+import { groups, groupMembers, mutedCategories, users } from './_schema.js';
+import { CATEGORY_IDS, statusOf, type Category, type Group, type GroupDetail, type GroupVisibility } from '../shared/rules.js';
 
-export const db = drizzle(vercelSql, { schema: { groups, groupMembers, subscriptions, users } });
+export const db = drizzle(vercelSql, { schema: { groups, groupMembers, mutedCategories, users } });
 
 type GroupRow = typeof groups.$inferSelect & {
   creatorFirstName: string;
@@ -147,23 +147,37 @@ export async function upsertUser(telegramId: number, username: string | null, fi
     .onConflictDoUpdate({ target: users.telegramId, set: { username, firstName } });
 }
 
-export async function getSubscriptions(userId: number): Promise<Category[]> {
-  const rows = await db.select({ category: subscriptions.category }).from(subscriptions).where(eq(subscriptions.userId, userId));
-  return rows.map((r) => r.category as Category);
+export async function getNotifySettings(userId: number): Promise<{ notify: boolean; subscriptions: Category[] }> {
+  const [user] = await db.select({ notify: users.notify }).from(users).where(eq(users.telegramId, userId));
+  const muted = await db.select({ category: mutedCategories.category }).from(mutedCategories).where(eq(mutedCategories.userId, userId));
+  const mutedSet = new Set(muted.map((r) => r.category));
+  return { notify: user?.notify ?? true, subscriptions: CATEGORY_IDS.filter((c) => !mutedSet.has(c)) };
 }
 
-/** Replaces the user's subscription set. */
+export async function setNotify(userId: number, notify: boolean): Promise<void> {
+  await db.update(users).set({ notify }).where(eq(users.telegramId, userId));
+}
+
+/** Replaces the user's category set (stored as the complement: muted categories). */
 export async function setSubscriptions(userId: number, categories: Category[]): Promise<void> {
-  await db.delete(subscriptions).where(eq(subscriptions.userId, userId));
-  if (categories.length) {
-    await db.insert(subscriptions).values(categories.map((category) => ({ userId, category })));
+  const muted = CATEGORY_IDS.filter((c) => !categories.includes(c));
+  await db.delete(mutedCategories).where(eq(mutedCategories.userId, userId));
+  if (muted.length) {
+    await db.insert(mutedCategories).values(muted.map((category) => ({ userId, category })));
   }
 }
 
+/** Everyone with notifications on who hasn't muted this category. */
 export async function listSubscriberIds(category: Category, excludeId: number): Promise<number[]> {
   const rows = await db
-    .select({ userId: subscriptions.userId })
-    .from(subscriptions)
-    .where(and(eq(subscriptions.category, category), ne(subscriptions.userId, excludeId)));
+    .select({ userId: users.telegramId })
+    .from(users)
+    .where(and(
+      eq(users.notify, true),
+      ne(users.telegramId, excludeId),
+      notExists(db.select().from(mutedCategories).where(and(
+        eq(mutedCategories.userId, users.telegramId), eq(mutedCategories.category, category),
+      ))),
+    ));
   return rows.map((r) => r.userId);
 }

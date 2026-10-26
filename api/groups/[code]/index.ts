@@ -7,6 +7,7 @@
 import { cancelGroup, getGroup, joinGroup, leaveGroup, updateGroup } from '../../_db.js';
 import { parseMaxMembers, parseVisibility } from '../../_validation.js';
 import { withAuth, ok, ApiError, codeParam, isUniqueViolation } from '../../_response.js';
+import { waitUntil } from '@vercel/functions';
 import { notifyJoin } from '../../_telegram.js';
 import { isActive, type GroupDetail } from '../../../shared/rules.js';
 
@@ -72,7 +73,7 @@ export default withAuth({
       }
       if (count === null) throw new ApiError(409, 'Group just filled up or closed');
       const updated = await load(g.code, user.id);
-      await notifyJoin(updated, user.id);
+      waitUntil(notifyJoin(updated, user.id));
       return ok(res, updated);
     }
 

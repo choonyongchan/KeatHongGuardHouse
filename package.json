@@ -20,6 +20,7 @@
     "@telegram-apps/telegram-ui": "2.1.13",
     "@tma.js/sdk-react": "3.0.19",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/functions": "^3.10.3",
     "@vercel/postgres": "0.10.0",
     "drizzle-orm": "^0.45.2",
     "eruda": "3.4.3",

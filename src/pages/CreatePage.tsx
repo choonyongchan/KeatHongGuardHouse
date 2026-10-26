@@ -16,7 +16,9 @@ import {
 import { createGroup } from '../lib/api.ts';
 import { useRun } from '../lib/useRun.ts';
 import { GroupDetailPanel } from '../components/GroupDetailPanel.tsx';
-import { buttonStyle, chipStyle, theme } from '../lib/theme.ts';
+import {
+  bottomBarStyle, buttonStyle, chipStyle, headerStyle, pageStyle, sectionLabelStyle, subtitleStyle, theme, titleStyle,
+} from '../lib/theme.ts';
 
 const PLACEHOLDERS: Record<Category, string> = {
   food: 'e.g. Supper at Al-Ameen',
@@ -26,14 +28,18 @@ const PLACEHOLDERS: Record<Category, string> = {
 };
 
 const inputStyle = (hasError: boolean): CSSProperties => ({
-  width: '100%', border: `1.5px solid ${hasError ? theme.error : theme.border}`, borderRadius: 10,
-  padding: '10px 12px', fontSize: 14, color: theme.textPrimary, background: theme.cardBg,
-  outline: 'none', boxSizing: 'border-box',
+  width: '100%', minHeight: 44, border: `1px solid ${hasError ? theme.error : theme.border}`, borderRadius: 12,
+  padding: '12px 16px', fontSize: 17, color: theme.textPrimary, background: theme.cardBg, boxSizing: 'border-box',
 });
 
-const labelStyle: CSSProperties = { fontSize: 13, color: theme.textSecondary, margin: '18px 0 8px' };
+const labelStyle: CSSProperties = { ...sectionLabelStyle, margin: '24px 4px 8px' };
 
-const rowStyle: CSSProperties = { display: 'flex', gap: 6, flexWrap: 'wrap' };
+const rowStyle: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap' };
+
+const errorStyle: CSSProperties = { color: theme.error, fontSize: 14, margin: '6px 4px 0' };
+
+/** Height of the bottom Create bar, reserved under the form. */
+const CREATE_BAR_H = 68;
 
 export function CreatePage() {
   const [category, setCategory] = useState<Category>('food');
@@ -71,21 +77,31 @@ export function CreatePage() {
 
   if (created) {
     return (
-      <div style={{ padding: '16px 16px 80px' }}>
-        <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 800, color: theme.textPrimary }}>Group created 🎉</h2>
-        <p style={{ margin: '0 0 14px', fontSize: 13, color: theme.textSecondary }}>
-          You're the leader. Share the link — the bot will DM you when people join.
-        </p>
-        <GroupDetailPanel group={created} currentUserId={userId} onClose={reset} onChanged={() => {}} />
-        <button onClick={reset} style={{ ...buttonStyle('outline'), marginTop: 8 }}>Create another</button>
+      <div style={pageStyle()}>
+        <header style={headerStyle}>
+          <h1 style={titleStyle}>Group created 🎉</h1>
+          <p style={subtitleStyle}>You're the leader. Share the link — the bot will DM you when people join.</p>
+          <button
+            onClick={reset}
+            style={{ background: 'none', border: 'none', padding: 0, marginTop: 12, color: theme.accent, fontSize: 17, cursor: 'pointer' }}
+          >
+            Create another ›
+          </button>
+        </header>
+        <GroupDetailPanel group={created} currentUserId={userId} onChanged={() => {}} footerBottom={theme.dockHeight} />
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '16px 16px 80px' }}>
-      <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: theme.textPrimary }}>Start a group</h2>
+    <div style={pageStyle(CREATE_BAR_H)}>
+      {/* ── Information ── */}
+      <header style={headerStyle}>
+        <h1 style={titleStyle}>Start a group</h1>
+        <p style={subtitleStyle}>Pick what it's for — sensible defaults fill in the rest.</p>
+      </header>
 
+      {/* ── Controls ── */}
       <div style={labelStyle}>What for?</div>
       <div style={rowStyle}>
         {CATEGORIES.map((c) => (
@@ -105,7 +121,7 @@ export function CreatePage() {
         style={inputStyle(!!errors.title)}
         aria-label="Group name"
       />
-      {errors.title && <p style={{ color: theme.error, fontSize: 11, margin: '4px 0 0' }}>{errors.title}</p>}
+      {errors.title && <p style={errorStyle}>{errors.title}</p>}
 
       <div style={labelStyle}>How many people (including you)?</div>
       <div style={rowStyle}>
@@ -135,15 +151,13 @@ export function CreatePage() {
         style={inputStyle(!!errors.link)}
         aria-label="Link"
       />
-      {errors.link && <p style={{ color: theme.error, fontSize: 11, margin: '4px 0 0' }}>{errors.link}</p>}
+      {errors.link && <p style={errorStyle}>{errors.link}</p>}
 
-      <button
-        onClick={() => void submit()}
-        disabled={busy !== null}
-        style={{ ...buttonStyle('primary', busy !== null), marginTop: 24 }}
-      >
-        {busy ? <Spinner size="s" /> : 'Create group'}
-      </button>
+      <div style={bottomBarStyle}>
+        <button onClick={() => void submit()} disabled={busy !== null} style={buttonStyle('primary', busy !== null)}>
+          {busy ? <Spinner size="s" /> : 'Create group'}
+        </button>
+      </div>
     </div>
   );
 }

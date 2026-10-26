@@ -11,6 +11,8 @@ export const users = pgTable('users', {
   telegramId: bigint('telegram_id', { mode: 'number' }).primaryKey(),
   username: text('username'),
   firstName: text('first_name').notNull(),
+  // Master switch for new-group DMs. On by default.
+  notify: boolean('notify').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -44,10 +46,10 @@ export const groupMembers = pgTable('group_members', {
   index('group_members_user_id_idx').on(t.userId),
 ]);
 
-export const subscriptions = pgTable('subscriptions', {
+// Opt-outs, not opt-ins, so every category is on by default.
+export const mutedCategories = pgTable('muted_categories', {
   userId: bigint('user_id', { mode: 'number' }).notNull().references(() => users.telegramId, { onDelete: 'cascade' }),
   category: text('category').notNull(),
 }, (t) => [
   primaryKey({ columns: [t.userId, t.category] }),
-  index('subscriptions_category_idx').on(t.category),
 ]);
