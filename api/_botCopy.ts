@@ -10,10 +10,10 @@
  */
 
 /** Bot display name. Telegram caps this at 64 chars; the @username is BotFather-only. */
-export const BOT_NAME = 'KeatHong GuardHouse 🎮';
+export const BOT_NAME = 'KeatHong GuardHouse';
 
 /** Label for the persistent chat menu button and the default inline web_app button. */
-export const OPEN_APP_BUTTON_TEXT = '🎮 Open App';
+export const OPEN_APP_BUTTON_TEXT = 'Open App';
 
 /** Spelled out for first-time Mini App users: where the button is and that nothing installs. */
 const WELCOME_TEXT =
@@ -23,7 +23,7 @@ const WELCOME_TEXT =
   "✨ Start your own: pick what it's for, then share the link\n" +
   '🔔 Get a ping whenever a new group opens\n\n' +
   '👇 Tap Open App below. It opens inside Telegram, nothing to install.\n\n' +
-  'Lost it later? Tap 🎮 Open App beside the message box anytime.';
+  'Lost it later? Tap Open App beside the message box anytime.';
 
 /**
  * Every command replies with `text` above a web_app button. `tab` lands the app on
@@ -50,7 +50,7 @@ export const BOT_DESCRIPTION =
   '👋 Hey neighbour! Find buddies in Keat Hong to split food delivery fees, share rides or squad up for games.\n\n' +
   'How it works:\n' +
   '1️⃣ Tap START below\n' +
-  '2️⃣ Tap 🎮 Open App, the button beside the message box\n' +
+  '2️⃣ Tap Open App, the button beside the message box\n' +
   '3️⃣ Join a group, or start your own in seconds\n\n' +
   "It's a mini app: it opens right here in Telegram. No download, no sign-up.";
 
