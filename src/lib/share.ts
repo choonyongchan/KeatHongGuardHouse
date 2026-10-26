@@ -9,31 +9,20 @@ import { inviteLink } from '../../shared/format.ts';
 const INVITE_LINK_BASE = import.meta.env.VITE_INVITE_LINK_BASE || 'https://t.me/keat_hong_guard_house_bot/app';
 
 /**
- * Shares a group's invite link via the OS share sheet, then Telegram's share
- * sheet, then a clipboard copy, in that order.
+ * Copies a group's invite link to the clipboard, then opens Telegram's share
+ * sheet. Either one succeeding is enough.
  *
- * @returns `'shared'` if a share sheet was used, `'copied'` if it fell back to clipboard.
+ * @returns Whether the link was copied.
+ * @throws If the link could neither be copied nor shared.
  */
-export async function shareInvite(code: string, title: string): Promise<'shared' | 'copied'> {
+export async function shareInvite(code: string, title: string): Promise<boolean> {
   const link = inviteLink(INVITE_LINK_BASE, code);
   const text = `Join "${title}" on KeatHong GuardHouse`;
 
-  if (typeof navigator.share === 'function') {
-    try {
-      await navigator.share({ title: text, url: link });
-      return 'shared';
-    } catch (e) {
-      if (e instanceof Error && e.name === 'AbortError') return 'shared';
-    }
-  }
-
-  if (shareURL.isAvailable()) {
-    shareURL(link, text);
-    return 'shared';
-  }
-
-  await navigator.clipboard.writeText(link);
-  return 'copied';
+  const copied = await navigator.clipboard.writeText(link).then(() => true, () => false);
+  if (shareURL.isAvailable()) shareURL(link, text);
+  else if (!copied) throw new Error('Share unavailable');
+  return copied;
 }
 
 /** Opens a Telegram DM inside the client rather than bouncing out to a browser. */

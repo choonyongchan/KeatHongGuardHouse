@@ -80,7 +80,7 @@ export function GroupDetailPanel({ group: initial, currentUserId, onChanged, foo
     hapticFeedback.impactOccurred('light');
     track('Share Group Link', { code: group.code });
     try {
-      if ((await shareInvite(group.code, group.title)) === 'copied') showFlash('Link copied');
+      if (await shareInvite(group.code, group.title)) showFlash('Link copied');
     } catch {
       showFlash('Could not share');
     }
