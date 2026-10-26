@@ -10,7 +10,7 @@ import { Spinner } from '@telegram-apps/telegram-ui';
 import { useSignal, initData } from '@tma.js/sdk-react';
 
 import {
-  CATEGORIES, EXPIRY_PRESETS, MEMBER_PRESETS, TITLE_MAX, validateLink, validateTitle,
+  CATEGORIES, EXPIRY_PRESETS, MEMBER_PRESETS, TITLE_MAX, DESCRIPTION_MAX, validateDescription, validateTitle,
   type Category, type GroupDetail,
 } from '../../shared/rules.ts';
 import { createGroup } from '../lib/api.ts';
@@ -44,10 +44,10 @@ const CREATE_BAR_H = 68;
 export function CreatePage() {
   const [category, setCategory] = useState<Category>('food');
   const [title, setTitle] = useState('');
-  const [externalLink, setExternalLink] = useState('');
+  const [description, setDescription] = useState('');
   const [maxMembers, setMaxMembers] = useState<number | null>(null);
   const [expiryMinutes, setExpiryMinutes] = useState<number>(CATEGORIES[0].defaultExpiry);
-  const [errors, setErrors] = useState<{ title?: string | null; link?: string | null }>({});
+  const [errors, setErrors] = useState<{ title?: string | null; description?: string | null }>({});
   const [created, setCreated] = useState<GroupDetail | null>(null);
   const userId = useSignal(initData.user)?.id ?? 0;
   const { run, busy } = useRun();
@@ -58,12 +58,12 @@ export function CreatePage() {
   }
 
   async function submit() {
-    const next = { title: validateTitle(title), link: validateLink(externalLink) };
+    const next = { title: validateTitle(title), description: validateDescription(description) };
     setErrors(next);
-    if (next.title || next.link) return;
+    if (next.title || next.description) return;
     const group = await run(
       'create',
-      () => createGroup({ title: title.trim(), category, externalLink: externalLink.trim(), maxMembers, expiryMinutes }),
+      () => createGroup({ title: title.trim(), category, description: description.trim(), maxMembers, expiryMinutes }),
       'create group',
     );
     if (group) setCreated(group);
@@ -72,7 +72,7 @@ export function CreatePage() {
   function reset() {
     setCreated(null);
     setTitle('');
-    setExternalLink('');
+    setDescription('');
   }
 
   if (created) {
@@ -141,17 +141,17 @@ export function CreatePage() {
         ))}
       </div>
 
-      <div style={labelStyle}>Link (optional) — Grab cart, game lobby, chat invite…</div>
-      <input
-        placeholder="https://…"
-        value={externalLink}
-        onChange={(e) => { setExternalLink(e.target.value); setErrors({}); }}
-        inputMode="url"
-        autoComplete="off"
-        style={inputStyle(!!errors.link)}
-        aria-label="Link"
+      <div style={labelStyle}>Notes (optional) — links, meeting point, how to pay…</div>
+      <textarea
+        placeholder={'e.g. Add to cart: https://…\nMeet at the guardhouse at 7pm'}
+        value={description}
+        onChange={(e) => { setDescription(e.target.value); setErrors({}); }}
+        maxLength={DESCRIPTION_MAX}
+        rows={4}
+        style={{ ...inputStyle(!!errors.description), resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.4 }}
+        aria-label="Notes"
       />
-      {errors.link && <p style={errorStyle}>{errors.link}</p>}
+      {errors.description && <p style={errorStyle}>{errors.description}</p>}
 
       <div style={bottomBarStyle}>
         <button onClick={() => void submit()} disabled={busy !== null} style={buttonStyle('primary', busy !== null)}>

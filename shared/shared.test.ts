@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { statusOf, validateLink, validateTitle, EXPIRY_PRESETS, EXPIRY_MIN, EXPIRY_MAX, CATEGORIES } from './rules.ts';
-import { formatTimeLeft, platformLabel } from './format.ts';
+import { statusOf, validateDescription, validateTitle, EXPIRY_PRESETS, EXPIRY_MIN, EXPIRY_MAX, CATEGORIES } from './rules.ts';
+import { formatTimeLeft, splitLinks } from './format.ts';
 
 const now = Date.parse('2026-01-01T00:00:00Z');
 const later = new Date(now + 60_000).toISOString();
@@ -24,16 +24,18 @@ test('validators', () => {
   expect(validateTitle('  ')).not.toBeNull();
   expect(validateTitle('x'.repeat(61))).not.toBeNull();
   expect(validateTitle('Supper')).toBeNull();
-  expect(validateLink('')).toBeNull();
-  expect(validateLink('https://food.grab.com/x')).toBeNull();
-  expect(validateLink('httpfoo')).not.toBeNull();
+  expect(validateDescription('')).toBeNull();
+  expect(validateDescription('Pay me via PayNow\nhttps://food.grab.com/x')).toBeNull();
+  expect(validateDescription('x'.repeat(501))).not.toBeNull();
 });
 
 test('formatters', () => {
   expect(formatTimeLeft(new Date(now + 42 * 60_000), now)).toBe('42m');
   expect(formatTimeLeft(new Date(now + 125 * 60_000), now)).toBe('2h 5m');
   expect(formatTimeLeft(new Date(now), now)).toBe('Expired');
-  expect(platformLabel('https://food.grab.com/sg')).toBe('GrabFood');
-  expect(platformLabel('https://www.example.com/a')).toBe('example.com');
-  expect(platformLabel('nope')).toBe('Link');
+  expect(splitLinks('Cart: https://a.co/x and\nhttps://b.co')).toEqual([
+    { text: 'Cart: ' }, { text: 'https://a.co/x', href: 'https://a.co/x' }, { text: ' and\n' },
+    { text: 'https://b.co', href: 'https://b.co' },
+  ]);
+  expect(splitLinks('javascript:alert(1)')).toEqual([{ text: 'javascript:alert(1)' }]);
 });

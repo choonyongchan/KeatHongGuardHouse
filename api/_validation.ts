@@ -5,7 +5,7 @@
 
 import { ApiError } from './_response.js';
 import {
-  CATEGORY_IDS, EXPIRY_MAX, EXPIRY_MIN, MEMBERS_MAX, MEMBERS_MIN, validateLink, validateTitle,
+  CATEGORY_IDS, EXPIRY_MAX, EXPIRY_MIN, MEMBERS_MAX, MEMBERS_MIN, validateDescription, validateTitle,
   type Category, type GroupVisibility,
 } from '../shared/rules.js';
 
@@ -37,8 +37,8 @@ export function parseCategory(value: unknown): Category {
 
 export function parseCreateBody(body: Body) {
   const title = String(body.title ?? '').trim();
-  const externalLink = String(body.externalLink ?? '').trim();
-  const err = validateTitle(title) ?? validateLink(externalLink);
+  const description = String(body.description ?? '').trim();
+  const err = validateTitle(title) ?? validateDescription(description);
   if (err) throw new ApiError(400, err);
 
   const expiryMinutes = Number(body.expiryMinutes);
@@ -48,7 +48,7 @@ export function parseCreateBody(body: Body) {
 
   return {
     title,
-    externalLink,
+    description,
     expiryMinutes,
     category: parseCategory(body.category),
     maxMembers: parseMaxMembers(body.maxMembers),

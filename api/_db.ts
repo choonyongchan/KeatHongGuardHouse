@@ -81,13 +81,13 @@ export async function isCodeTaken(code: string): Promise<boolean> {
  * CTEs) — the Neon HTTP driver has no interactive transactions.
  */
 export async function insertGroup(v: {
-  code: string; creatorId: number; category: Category; title: string; externalLink: string;
+  code: string; creatorId: number; category: Category; title: string; description: string;
   maxMembers: number | null; expiryMinutes: number; visibility: GroupVisibility;
 }): Promise<void> {
   const newGroup = db.$with('new_group').as(
     db.insert(groups).values({
       code: v.code, creatorId: v.creatorId, category: v.category, title: v.title,
-      externalLink: v.externalLink, maxMembers: v.maxMembers, visibility: v.visibility,
+      description: v.description, maxMembers: v.maxMembers, visibility: v.visibility,
       expiresAt: sql`now() + make_interval(mins => ${v.expiryMinutes})`,
     }).returning(),
   );

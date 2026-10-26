@@ -3,7 +3,7 @@
  * Apply changes with `bun run db:push`.
  */
 
-import { pgTable, pgEnum, text, boolean, timestamp, integer, bigint, primaryKey, index } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, text, varchar, boolean, timestamp, integer, bigint, primaryKey, index } from 'drizzle-orm/pg-core';
 
 export const groupVisibilityEnum = pgEnum('group_visibility', ['public', 'private']);
 
@@ -26,7 +26,7 @@ export const groups = pgTable('groups', {
   category: text('category').notNull().default('other'),
   creatorId: bigint('creator_id', { mode: 'number' }).notNull().references(() => users.telegramId),
   title: text('title').notNull(),
-  externalLink: text('external_link').notNull().default(''),
+  description: varchar('description', { length: 500 }).notNull().default(''),
   maxMembers: integer('max_members'),
   currentCount: integer('current_count').notNull().default(1),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),

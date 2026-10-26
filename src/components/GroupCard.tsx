@@ -1,6 +1,6 @@
 import { Spinner } from '@telegram-apps/telegram-ui';
 import { categoryOf, isActive, type Group } from '../../shared/rules.ts';
-import { formatTimeLeft, platformLabel } from '../../shared/format.ts';
+import { formatTimeLeft } from '../../shared/format.ts';
 import { cardStyle, statusBadge, theme } from '../lib/theme.ts';
 
 interface GroupCardProps {
@@ -27,8 +27,7 @@ function Slots({ current, max }: { current: number; max: number | null }) {
 export function GroupCard({ group, onOpen, onJoin, joining }: GroupCardProps) {
   const badge = statusBadge(group.status);
   const active = isActive(group.status);
-  const meta = [`by ${group.creatorFirstName}`, group.externalLink && platformLabel(group.externalLink)]
-    .filter(Boolean).join(' · ');
+  const meta = `by ${group.creatorFirstName}${group.description ? ' · 📝 Notes' : ''}`;
 
   return (
     <div

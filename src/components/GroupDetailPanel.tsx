@@ -3,7 +3,7 @@ import { Spinner } from '@telegram-apps/telegram-ui';
 import { hapticFeedback } from '@tma.js/sdk-react';
 import { track } from '@vercel/analytics/react';
 import { MEMBER_PRESETS, categoryOf, isActive, type GroupDetail } from '../../shared/rules.ts';
-import { formatExpiry, formatTimeLeft, memberName, platformLabel } from '../../shared/format.ts';
+import { formatExpiry, formatTimeLeft, memberName, splitLinks } from '../../shared/format.ts';
 import { groupAction, updateGroup, type GroupAction } from '../lib/api.ts';
 import { openUserChat, shareInvite } from '../lib/share.ts';
 import { useRun } from '../lib/useRun.ts';
@@ -149,16 +149,15 @@ export function GroupDetailPanel({ group: initial, currentUserId, onChanged, foo
             {group.code}
           </button>
         </div>
-        {group.externalLink && (
-          <a
-            href={group.externalLink}
-            target="_blank"
-            rel="noreferrer"
-            style={{ ...rowStyle, borderTop: `1px solid ${theme.border}`, color: theme.accent, fontSize: 17, textDecoration: 'none' }}
-          >
-            <span style={{ flex: 1 }}>Open {platformLabel(group.externalLink)}</span>
-            <span aria-hidden>›</span>
-          </a>
+        {group.description && (
+          <p style={{
+            margin: 0, padding: '12px 16px', borderTop: `1px solid ${theme.border}`, fontSize: 15, color: theme.textPrimary,
+            whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
+          }}>
+            {splitLinks(group.description).map((part, i) => part.href
+              ? <a key={i} href={part.href} target="_blank" rel="noreferrer" style={{ color: theme.accent, fontWeight: 700 }}>{part.text}</a>
+              : part.text)}
+          </p>
         )}
       </div>
 

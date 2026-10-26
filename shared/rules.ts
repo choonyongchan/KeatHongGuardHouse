@@ -4,6 +4,8 @@
  */
 
 export const TITLE_MAX = 60;
+/** Matches the varchar(500) column in api/_schema.ts. */
+export const DESCRIPTION_MAX = 500;
 export const EXPIRY_MIN = 15;
 export const EXPIRY_MAX = 24 * 60;
 export const MEMBERS_MIN = 2;
@@ -48,7 +50,8 @@ export interface Group {
   creatorFirstName: string;
   creatorUsername: string | null;
   title: string;
-  externalLink: string;
+  /** Free text from the leader: instructions, one or more links. May be ''. */
+  description: string;
   maxMembers: number | null;
   currentCount: number;
   expiresAt: string;
@@ -101,8 +104,7 @@ export function validateTitle(title: string): string | null {
   return null;
 }
 
-export function validateLink(link: string): string | null {
-  const l = link.trim();
-  if (l && !/^https?:\/\//.test(l)) return 'Link must start with http:// or https://';
+export function validateDescription(description: string): string | null {
+  if (description.trim().length > DESCRIPTION_MAX) return `Notes must be ${DESCRIPTION_MAX} characters or less`;
   return null;
 }

@@ -38,7 +38,7 @@ export const getGroup = (code: string) => apiFetch<GroupDetail>(`/api/groups/${c
 export const createGroup = (payload: {
   title: string;
   category: Category;
-  externalLink: string;
+  description: string;
   maxMembers: number | null;
   expiryMinutes: number;
 }) => apiFetch<GroupDetail>('/api/groups', 'POST', payload);

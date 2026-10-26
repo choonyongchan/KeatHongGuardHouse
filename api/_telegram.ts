@@ -68,8 +68,8 @@ export function notifyJoin(g: GroupDetail, joinerId: number): Promise<unknown> {
   if (!joiner) return Promise.resolve();
   const leader = memberName(g.creatorFirstName, g.creatorUsername);
   const full = g.status === 'full' ? '\nThe group is now full.' : '';
-  // In the text, not a button: a malformed URL in a button makes Telegram reject the whole message.
-  const link = g.externalLink ? `\nLink: ${g.externalLink}` : '';
+  // In the text, not a button: Telegram auto-links URLs, and a malformed URL in a button rejects the whole message.
+  const link = g.description ? `\n\n📝 ${g.description}` : '';
 
   return Promise.all([
     sendMessage(

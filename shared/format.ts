@@ -32,14 +32,11 @@ export function inviteLink(base: string, code: string): string {
   return `${base}?startapp=${code}`;
 }
 
-/** "GrabFood", "Foodpanda", or the bare hostname. */
-export function platformLabel(link: string): string {
-  try {
-    const host = new URL(link).hostname.replace(/^www\./, '');
-    if (host.endsWith('grab.com')) return 'GrabFood';
-    if (host.endsWith('foodpanda.sg') || host.endsWith('foodpanda.com')) return 'Foodpanda';
-    return host;
-  } catch {
-    return 'Link';
-  }
+/**
+ * Splits free text into plain and http(s) URL parts so the UI can render links
+ * without innerHTML. Only http(s) is ever linked, so no javascript: hrefs.
+ */
+export function splitLinks(text: string): { text: string; href?: string }[] {
+  return text.split(/(https?:\/\/[^\s<>"]+)/).filter(Boolean).map((part) =>
+    /^https?:\/\//.test(part) ? { text: part, href: part } : { text: part });
 }
