@@ -1,7 +1,7 @@
 /**
  * @fileoverview One-time (idempotent) Telegram bot bootstrap. Points the webhook
  * at the deployed /api/bot route, registers the command list, sets the persistent
- * web_app menu button, and publishes the bot's description text.
+ * web_app menu button, and publishes the bot's name and description text.
  *
  * Run with `bun run telegram:setup`. Bun auto-loads .env.local, so no explicit
  * env loading is needed. Uses raw fetch rather than grammY — matching
@@ -13,6 +13,7 @@
 
 import {
   BOT_COMMANDS,
+  BOT_NAME,
   OPEN_APP_BUTTON_TEXT,
   BOT_DESCRIPTION,
   BOT_SHORT_DESCRIPTION,
@@ -97,6 +98,7 @@ async function main(): Promise<void> {
     },
   });
 
+  await callApi('setMyName', { name: BOT_NAME });
   await callApi('setMyDescription', { description: BOT_DESCRIPTION });
   await callApi('setMyShortDescription', { short_description: BOT_SHORT_DESCRIPTION });
 

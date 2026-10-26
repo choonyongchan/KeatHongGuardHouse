@@ -1,47 +1,33 @@
-/* Tokens follow DESIGN.md: one blue accent, parchment canvas, hairlines instead of shadows. */
+/* Light-only, game-like tokens: warm cream canvas, chunky white cards, bouncy violet buttons, sunny highlights. */
 :root {
-  --app-accent: #0066cc;
-  --app-accent-focus: #0071e3;
-  --app-accent-light: rgba(0, 102, 204, 0.08);
-  --app-error: #d70015;
-  --app-error-light: #fff0f1;
-  --app-text-primary: #1d1d1f;
-  --app-text-secondary: #6e6e73;
-  --app-text-muted: #7a7a7a;
+  color-scheme: light;
+  --app-accent: #6c4dff;
+  --app-accent-shadow: #4a2fd1;
+  --app-accent-focus: #ffb020;
+  --app-accent-light: #efebff;
+  --app-sun: #ffc83d;
+  --app-error: #ff4b4b;
+  --app-error-light: #ffefef;
+  --app-text-primary: #3c3c3c;
+  --app-text-secondary: #6f6f6f;
+  --app-text-muted: #9a9a9a;
   --app-card-bg: #ffffff;
-  --app-page-bg: #f5f5f7;
-  --app-border: rgba(0, 0, 0, 0.08);
-  --app-badge-bg: #e8e8ed;
-  --app-frosted: rgba(245, 245, 247, 0.8);
-  --app-dock-h: calc(56px + env(safe-area-inset-bottom));
+  --app-page-bg: #fff8ec;
+  --app-border: #ece3d3;
+  --app-badge-bg: #f3ecdf;
+  --app-frosted: rgba(255, 248, 236, 0.88);
+  --app-dock-h: calc(64px + env(safe-area-inset-bottom));
   /* Content column: full width on phones, centred on tablets/desktop. */
   --app-max-w: 720px;
   --app-gutter: max(16px, env(safe-area-inset-left), calc((100% - var(--app-max-w)) / 2));
 }
 
-:root[data-theme='dark'] {
-  --app-accent: #2997ff;
-  --app-accent-focus: #2997ff;
-  --app-accent-light: rgba(41, 151, 255, 0.14);
-  --app-error: #ff6961;
-  --app-error-light: #3a1418;
-  --app-text-primary: #f5f5f7;
-  --app-text-secondary: #a1a1a6;
-  --app-text-muted: #86868b;
-  --app-card-bg: #1c1c1e;
-  --app-page-bg: #000000;
-  --app-border: rgba(255, 255, 255, 0.1);
-  --app-badge-bg: #2a2a2c;
-  --app-frosted: rgba(29, 29, 31, 0.8);
-}
-
 body {
   background: var(--app-page-bg);
   color: var(--app-text-primary);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, sans-serif;
+  font-family: Nunito, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 17px;
   line-height: 1.47;
-  letter-spacing: -0.374px;
   padding: 0;
   margin: 0;
   -webkit-text-size-adjust: 100%;
@@ -62,12 +48,13 @@ button, [role='button'], label {
 button {
   font-family: inherit;
   letter-spacing: inherit;
-  transition: transform 0.12s ease;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
 
-/* The system-wide press state. */
+/* The system-wide press state: chunky buttons sink into their shadow. */
 button:active:not(:disabled) {
-  transform: scale(0.95);
+  transform: translateY(2px) scale(0.97);
+  box-shadow: none !important;
 }
 
 [role='button'] {

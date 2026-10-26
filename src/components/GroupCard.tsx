@@ -40,7 +40,7 @@ export function GroupCard({ group, onOpen, onJoin, joining }: GroupCardProps) {
       }}
     >
       <div style={{
-        width: 44, height: 44, borderRadius: 12, background: theme.pageBg, flexShrink: 0,
+        width: 48, height: 48, borderRadius: 14, background: theme.accentLight, flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
       }}>
         {categoryOf(group.category).emoji}
@@ -48,7 +48,7 @@ export function GroupCard({ group, onOpen, onJoin, joining }: GroupCardProps) {
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontWeight: 600, fontSize: 17, lineHeight: 1.24, color: theme.textPrimary,
+          fontWeight: 800, fontSize: 17, lineHeight: 1.24, color: theme.textPrimary,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>
           {group.title}
@@ -66,15 +66,15 @@ export function GroupCard({ group, onOpen, onJoin, joining }: GroupCardProps) {
           disabled={joining}
           aria-label={`Join ${group.title}`}
           style={{
-            background: theme.accent, color: '#fff', border: 'none', borderRadius: 9999,
-            minHeight: 36, padding: '6px 18px', fontSize: 14, cursor: 'pointer', flexShrink: 0,
+            background: theme.accent, color: '#fff', border: 'none', borderRadius: 12, boxShadow: `0 3px 0 ${theme.accentShadow}`,
+            minHeight: 38, padding: '6px 18px', fontSize: 15, fontWeight: 800, cursor: 'pointer', flexShrink: 0,
           }}
         >
           {joining ? <Spinner size="s" /> : 'Join'}
         </button>
       ) : (
         <span style={{
-          background: badge.bg, color: badge.color, fontSize: 12, fontWeight: 600,
+          background: badge.bg, color: badge.color, fontSize: 12, fontWeight: 800,
           padding: '3px 10px', borderRadius: 9999, flexShrink: 0,
         }}>
           {group.joined && active ? 'Joined' : badge.label}

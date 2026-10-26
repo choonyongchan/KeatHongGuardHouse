@@ -9,28 +9,51 @@
  * that the old (deleted) escapeMd helper existed to work around.
  */
 
-/** Reply to /start in a private chat. Sits directly above the "Open App" button. */
-export const WELCOME_TEXT =
-  'Welcome to KeatHong GuardHouse 👋\n\n' +
-  'Connect with neighbours for Grab/Foodpanda order-in discounts, carpool ' +
-  'buddies, gaming buddies and more.\n\n' +
-  'Tap the button below to get started!';
+/** Bot display name. Telegram caps this at 64 chars; the @username is BotFather-only. */
+export const BOT_NAME = 'KeatHong GuardHouse 🎮';
 
-/** Label for both the inline web_app button and the persistent chat menu button. */
-export const OPEN_APP_BUTTON_TEXT = 'Open App';
+/** Label for the persistent chat menu button and the default inline web_app button. */
+export const OPEN_APP_BUTTON_TEXT = '🎮 Open App';
 
-/** Registered via setMyCommands; shown when a user types "/" in the chat. */
-export const BOT_COMMANDS = [
-  { command: 'start', description: 'Open KeatHong GuardHouse' },
-] as const;
+/** Spelled out for first-time Mini App users: where the button is and that nothing installs. */
+const WELCOME_TEXT =
+  'Welcome to KeatHong GuardHouse! 👋\n\n' +
+  "Here's how it works:\n" +
+  '🍔 Join a group: split delivery fees, share a ride, find gaming buddies\n' +
+  "✨ Start your own: pick what it's for, then share the link\n" +
+  '🔔 Get a ping whenever a new group opens\n\n' +
+  '👇 Tap Open App below. It opens inside Telegram, nothing to install.\n\n' +
+  'Lost it later? Tap 🎮 Open App beside the message box anytime.';
+
+/**
+ * Every command replies with `text` above a web_app button. `tab` lands the app on
+ * that tab via `?tab=` (read once in src/components/App.tsx). Not a `#/path`:
+ * Telegram appends launch data to the hash, which would clobber the route.
+ */
+export const COMMAND_REPLIES = {
+  start: { text: WELCOME_TEXT, button: OPEN_APP_BUTTON_TEXT, tab: '' },
+  app: { text: '👇 Tap to see the groups open right now.', button: OPEN_APP_BUTTON_TEXT, tab: '' },
+  new: { text: '✨ Food run, ride or game? Tap to start your group.', button: '✨ Start a group', tab: 'create' },
+  help: { text: WELCOME_TEXT, button: '❓ How it works', tab: 'settings' },
+} as const;
+
+/** Registered via setMyCommands; shown when a user types "/" in the chat. Order = menu order. */
+export const BOT_COMMANDS: { command: keyof typeof COMMAND_REPLIES; description: string }[] = [
+  { command: 'start', description: 'Welcome + open the app' },
+  { command: 'app', description: 'Browse open groups' },
+  { command: 'new', description: 'Start a new group' },
+  { command: 'help', description: 'How it works' },
+];
 
 /** The "What can this bot do?" card on an empty chat. Telegram caps this at 512 chars. */
 export const BOT_DESCRIPTION =
-  'Connect with neighbours in Keat Hong for Grab/Foodpanda order-in discounts, ' +
-  'carpool buddies, gaming buddies and more.\n\n' +
-  'Create a group, share the code, and fill it up — or browse what your ' +
-  'neighbours have already started.';
+  '👋 Hey neighbour! Find buddies in Keat Hong to split food delivery fees, share rides or squad up for games.\n\n' +
+  'How it works:\n' +
+  '1️⃣ Tap START below\n' +
+  '2️⃣ Tap 🎮 Open App, the button beside the message box\n' +
+  '3️⃣ Join a group, or start your own in seconds\n\n' +
+  "It's a mini app: it opens right here in Telegram. No download, no sign-up.";
 
 /** Bio shown under the bot's name on its profile. Telegram caps this at 120 chars. */
 export const BOT_SHORT_DESCRIPTION =
-  'Find neighbours in Keat Hong to share food delivery orders, carpools and games with.';
+  'Split food orders, share rides & find gaming buddies in Keat Hong. Opens right inside Telegram, nothing to download.';

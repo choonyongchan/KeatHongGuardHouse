@@ -2,7 +2,8 @@
  * @fileoverview POST /api/bot — Telegram Bot API webhook.
  *
  * The bot itself is deliberately minimal: its only job is to hand users a way
- * into the Mini App. /start replies with an inline web_app button; the
+ * into the Mini App. Every command (/start, /app, /new, /help) replies with an
+ * inline web_app button, optionally landing on a specific tab; the
  * persistent menu button next to the message input is configured separately by
  * scripts/setup-telegram.ts.
  *
@@ -13,7 +14,7 @@
  */
 
 import { Bot, InlineKeyboard, webhookCallback } from 'grammy';
-import { WELCOME_TEXT, OPEN_APP_BUTTON_TEXT } from './_botCopy.js';
+import { BOT_COMMANDS, COMMAND_REPLIES } from './_botCopy.js';
 
 const token = process.env.BOT_TOKEN;
 const webAppUrl = process.env.WEB_APP_URL;
@@ -31,21 +32,24 @@ if (!secretToken) throw new Error('TELEGRAM_WEBHOOK_SECRET is unset');
 // the bot is ever renamed. Revisit only if cold-start latency becomes a problem.
 const bot = new Bot(token);
 
-bot.command('start', async (ctx) => {
-  // web_app buttons are private-chat only — sending one to a group or channel
-  // fails with BUTTON_TYPE_INVALID, so stay silent there.
-  if (ctx.chat.type !== 'private') return;
+for (const { command } of BOT_COMMANDS) {
+  const { text, button, tab } = COMMAND_REPLIES[command];
+  const url = tab ? `${webAppUrl}/?tab=${tab}` : webAppUrl;
 
-  // The /start payload (ctx.match) is ignored on purpose. Every share link the
-  // app generates is a t.me "?startapp=CODE" direct link (src/lib/share.ts),
-  // which opens the Mini App without ever producing a /start message. A payload
-  // could not be threaded through this button anyway: start_param is populated
-  // only by startapp= on a t.me link, never by a raw web_app URL. If a ?start=
-  // flow is ever wanted, the fix is a url button pointing at buildInviteLink().
-  await ctx.reply(WELCOME_TEXT, {
-    reply_markup: new InlineKeyboard().webApp(OPEN_APP_BUTTON_TEXT, webAppUrl),
+  bot.command(command, async (ctx) => {
+    // web_app buttons are private-chat only — sending one to a group or channel
+    // fails with BUTTON_TYPE_INVALID, so stay silent there.
+    if (ctx.chat.type !== 'private') return;
+
+    // The /start payload (ctx.match) is ignored on purpose. Every share link the
+    // app generates is a t.me "?startapp=CODE" direct link (src/lib/share.ts),
+    // which opens the Mini App without ever producing a /start message. A payload
+    // could not be threaded through this button anyway: start_param is populated
+    // only by startapp= on a t.me link, never by a raw web_app URL. If a ?start=
+    // flow is ever wanted, the fix is a url button pointing at buildInviteLink().
+    await ctx.reply(text, { reply_markup: new InlineKeyboard().webApp(button, url) });
   });
-});
+}
 
 // Not optional: grammY's default error handler rethrows, which Vercel surfaces
 // as a 500 — and Telegram retries a failed update with backoff, meaning

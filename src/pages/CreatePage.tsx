@@ -28,7 +28,7 @@ const PLACEHOLDERS: Record<Category, string> = {
 };
 
 const inputStyle = (hasError: boolean): CSSProperties => ({
-  width: '100%', minHeight: 44, border: `1px solid ${hasError ? theme.error : theme.border}`, borderRadius: 12,
+  width: '100%', minHeight: 44, border: `2px solid ${hasError ? theme.error : theme.border}`, borderRadius: 14,
   padding: '12px 16px', fontSize: 17, color: theme.textPrimary, background: theme.cardBg, boxSizing: 'border-box',
 });
 

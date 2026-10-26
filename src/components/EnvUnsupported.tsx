@@ -4,30 +4,28 @@
  */
 
 import { Placeholder, AppRoot } from '@telegram-apps/telegram-ui';
-import { retrieveLaunchParams, isColorDark, isRGB } from '@tma.js/sdk-react';
+import { retrieveLaunchParams } from '@tma.js/sdk-react';
 import { useMemo } from 'react';
 
 /**
  * Renders an error placeholder when the Telegram client version is unsupported.
- * Attempts to derive the correct theme and platform from launch params; falls
+ * Always light. Derives the platform from launch params; falls
  * back to light Android defaults if params are unavailable.
  *
  * @returns A themed AppRoot containing a Placeholder error message.
  */
 export function EnvUnsupported() {
-  const [platform, isDark] = useMemo(() => {
+  const platform = useMemo(() => {
     try {
-      const lp = retrieveLaunchParams();
-      const { bg_color: bgColor } = lp.tgWebAppThemeParams;
-      return [lp.tgWebAppPlatform, bgColor && isRGB(bgColor) ? isColorDark(bgColor) : false];
+      return retrieveLaunchParams().tgWebAppPlatform;
     } catch {
-      return ['android', false];
+      return 'android';
     }
   }, []);
 
   return (
     <AppRoot
-      appearance={isDark ? 'dark' : 'light'}
+      appearance="light"
       platform={['macos', 'ios'].includes(platform) ? 'ios' : 'base'}
     >
       <Placeholder
